@@ -1,0 +1,11 @@
+applications:
+  - name: eco-monitor-app
+    path: .
+    memory: 256M
+    instances: 1
+    buildpacks:
+      - python_buildpack
+    env:
+      OPTIMIZE_PACKAGING: true
+    services:
+      - nombre-de-tu-instancia-hana-cloud  # El nombre exacto en tu subaccount

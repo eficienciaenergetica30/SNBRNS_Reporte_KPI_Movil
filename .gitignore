@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Config & Secrets
+.env
+.DS_Store
+
+# SAP BTP / Cloud Foundry
+manifest.yml.bak

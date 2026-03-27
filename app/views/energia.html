@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% set active_page = 'energia' %}
+
+{% block content %}
+<!-- KPIs Clave (Banner Principal) -->
+<section class="mb-6">
+    <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-3">KPIs Clave</h3>
+    <div class="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+
+        <!-- Consumo Actual -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Consumo Actual</p>
+                <p class="text-xs text-slate-500 mt-1">kWh</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsRed" id="masterKpiActual">0</p>
+                <p class="text-xs text-slate-500 mt-2">kWh consumidos</p>
+            </div>
+        </div>
+
+        <!-- Objetivo -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Objetivo</p>
+                <p class="text-xs text-slate-500 mt-1">kWh</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiTarget">0</p>
+                <p class="text-xs text-slate-500 mt-2">kWh Meta</p>
+            </div>
+        </div>
+
+        <!-- Cumplimiento -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
+                <p class="text-xs text-slate-500 mt-1">%</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white"><span
+                        id="masterKpiPct">0</span><span class="text-xl text-slate-500">%</span></p>
+                <p class="text-xs text-slate-500 mt-2">Progreso del día</p>
+            </div>
+        </div>
+
+        <!-- PF Max -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Máx)</p>
+                <p class="text-xs text-slate-500 mt-1">Hoy</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMax">-</p>
+                <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMaxTime">-</p>
+            </div>
+        </div>
+
+        <!-- PF Min -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Mín)</p>
+                <p class="text-xs text-slate-500 mt-1">Hoy</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMin">-</p>
+                <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMinTime">-</p>
+            </div>
+        </div>
+
+        <!-- PF Prom -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Prom)</p>
+                <p class="text-xs text-slate-500 mt-1">Hoy</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfAvg">-</p>
+                <p class="text-xs text-slate-500 mt-2">Promedio</p>
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        /* Ocultar scrollbar de tailwind utilities no nativas */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</section>
+
+<!-- Widgets de Meta y Progreso -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+    <!-- 1. Gráfica KPI del día (Meta vs Realidad) -->
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1 flex flex-col justify-center items-center">
+        <h3 class="font-bold text-lg text-slate-800 dark:text-white self-start w-full mb-4">Meta vs Realidad</h3>
+        <div class="h-48 w-full relative">
+            <canvas id="chartKpiDay"></canvas>
+        </div>
+    </div>
+
+    <!-- 2. Barra de Progreso -->
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-2 flex flex-col justify-center">
+        <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-6">Nivel de Progreso</h3>
+
+        <div class="flex justify-between text-sm mb-3">
+            <span class="font-semibold text-slate-600 dark:text-slate-300 lg:text-base">Consumo Actual:
+                <span id="progressActual" class="text-sanbornsRed">0</span> kWh</span>
+            <span class="font-semibold text-slate-600 dark:text-slate-300 lg:text-base">Objetivo: <span
+                    id="progressTarget">0</span> kWh</span>
+        </div>
+
+        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-8 overflow-hidden shadow-inner">
+            <div id="progressBar"
+                class="bg-sanbornsRed h-8 rounded-full text-sm flex items-center justify-center text-white font-bold transition-all duration-1000 w-0">
+                0%</div>
+        </div>
+        <p class="text-xs text-slate-500 mt-4 text-center">Cuando la barra se llena al 100%, el consumo
+            ha superado el límite ideal establecido para el sitio.</p>
+    </div>
+
+</div>
+
+<div class="grid grid-cols-1 gap-6">
+
+    <!-- 3. MODULO ENERGÍA POR HORA -->
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg text-amber-500 flex items-center gap-2">⚡ Consumo Diario por Hora</h3>
+            <div class="text-right">
+                <p class="text-xs text-slate-500 dark:text-slate-400">Total Acumulado</p>
+                <p class="text-xl font-bold" id="kpiEnergy">0 kWh</p>
+            </div>
+        </div>
+        <div class="h-80 relative">
+            <canvas id="chartEnergy"></canvas>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/energia.js') }}"></script>
+{% endblock %}

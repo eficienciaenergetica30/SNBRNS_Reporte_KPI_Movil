@@ -1,0 +1,5 @@
+Flask==3.0.2
+hdbcli==2.19.21
+cfenv==0.5.3
+python-dotenv==1.0.1
+gunicorn==21.2.0

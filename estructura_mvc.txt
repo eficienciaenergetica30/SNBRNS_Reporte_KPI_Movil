@@ -1,0 +1,72 @@
+Monitoreo_Gemini/                      ← Raíz del proyecto
+│
+├── app.py                             ← Entrypoint: inicia el servidor Flask
+│
+├── app/                               ← Paquete principal (Arquitectura MVC)
+│   ├── __init__.py                    ← Application Factory (create_app)
+│   │
+│   ├── models/                        ← [M] MODELO — Acceso a datos
+│   │   ├── __init__.py
+│   │   └── hana_model.py              ← Conexión a SAP HANA Cloud (get_db_connection, test_db_connection)
+│   │
+│   ├── controllers/                   ← [C] CONTROLADOR — Blueprints / Rutas
+│   │   ├── __init__.py
+│   │   ├── main_controller.py         ← Blueprint 'main'  → GET /
+│   │   └── api_controller.py          ← Blueprint 'api'   → GET /api/sites, GET /api/debug-db
+│   │
+│   ├── views/                         ← [V] VISTA — Templates HTML (Jinja2)
+│   │   └── index.html                 ← Dashboard principal (dark theme, Tailwind)
+│   │
+│   └── static/                        ← Archivos estáticos servidos por Flask
+│       └── js/
+│           └── dashboard.js           ← Lógica frontend: autocomplete de sitios, filtros
+│
+├── .env                               ← Variables de entorno locales (HANA_HOST, PORT, …)
+├── .gitignore
+├── Procfile                           ← Comando de inicio en SAP BTP / Cloud Foundry
+├── manifest.yml                       ← Manifiesto de despliegue SAP BTP
+├── requirements.txt                   ← Dependencias Python
+└── runtime.txt                        ← Versión de Python
+
+
+══════════════════════════════════════════════════════════════
+  RESUMEN DE RESPONSABILIDADES POR CAPA
+══════════════════════════════════════════════════════════════
+
+  MODELO  (app/models/)
+    • Única capa que habla con la base de datos.
+    • hana_model.py contiene get_db_connection() y test_db_connection().
+    • Si mañana cambias de SAP HANA a PostgreSQL, sólo tocas esta carpeta.
+
+  CONTROLADOR  (app/controllers/)
+    • Recibe la petición HTTP, llama al Modelo y decide qué Vista devolver.
+    • Cada Blueprint agrupa rutas relacionadas:
+        - main_controller.py  → vistas de la interfaz web
+        - api_controller.py   → endpoints REST JSON para el frontend
+    • No contiene SQL ni HTML.
+
+  VISTA  (app/views/)
+    • Templates Jinja2 que renderizan el HTML.
+    • No contiene lógica de negocio; sólo presentación.
+    • Los archivos JS en static/js/ son la extensión de la Vista en el cliente.
+
+══════════════════════════════════════════════════════════════
+  FLUJO DE UNA PETICIÓN (ejemplo: GET /api/sites)
+══════════════════════════════════════════════════════════════
+
+  Browser → app.py (entrypoint)
+           → app/__init__.py (create_app registra Blueprints)
+           → app/controllers/api_controller.py  (ruta /api/sites)
+           → app/models/hana_model.py           (consulta HANA)
+           → jsonify(sites)                     (respuesta JSON al browser)
+
+══════════════════════════════════════════════════════════════
+  ARCHIVOS LEGACY (pueden eliminarse después de validar)
+══════════════════════════════════════════════════════════════
+
+  db_connector.py         → Reemplazado por app/models/hana_model.py
+  static/dashboard.js     → Reemplazado por app/static/js/dashboard.js
+  templates/index.html    → Reemplazado por app/views/index.html
+
+
+Generado: 2026-03-26
