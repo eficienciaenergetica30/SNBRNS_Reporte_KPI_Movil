@@ -27,7 +27,8 @@ def get_energy_data(costcenter, date):
         kpi_query = f'''
             SELECT 
                 IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
-                IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET",
+                IFNULL(AVG("PrecioMedio"), 0) AS "AVERAGE_PRICE"
             FROM "{schema}"."{view}"
             WHERE "DATE" = ? AND "COSTCENTER" = ?
         '''
@@ -36,7 +37,9 @@ def get_energy_data(costcenter, date):
         if kpi_row:
             data["kpi"] = {
                 "actual": float(kpi_row[0]),
-                "target": float(kpi_row[1])
+                "target": float(kpi_row[1]),
+                "average_price": float(kpi_row[2]),
+                "cost_per_kwh": float(kpi_row[2] * kpi_row[0])
             }
 
         # Hourly
@@ -62,19 +65,19 @@ def get_energy_data(costcenter, date):
         pf_query = f'''
             SELECT
                 ROUND(MIN_Q.TOTALPOWERFACTOR, 3) AS MIN_TOTALPOWERFACTOR,
-                MIN_Q.TIME AS TIME_MIN_TOTALPOWERFACTOR,
+                MIN_Q."HOUR" AS TIME_MIN_TOTALPOWERFACTOR,
                 ROUND(MAX_Q.TOTALPOWERFACTOR, 3) AS MAX_TOTALPOWERFACTOR,
-                MAX_Q.TIME AS TIME_MAX_TOTALPOWERFACTOR,
+                MAX_Q."HOUR" AS TIME_MAX_TOTALPOWERFACTOR,
                 ROUND(CURRENT_Q.TOTALPOWERFACTOR, 2) AS CURRENT_TOTALPOWERFACTOR,
-                CURRENT_Q.TIME AS TIME_CURRENT_TOTALPOWERFACTOR,
+                CURRENT_Q."HOUR" AS TIME_CURRENT_TOTALPOWERFACTOR,
                 ROUND(TOTAL_Q.TOTAL_POWER_FACTOR / TOTAL_Q.CNT, 2) AS AVG_TOTALPOWERFACTOR,
                 ROUND(MIN_Q.TOTALPOWERFACTOR / MAX_Q.TOTALPOWERFACTOR, 1) AS MINMAX
             FROM
-                (SELECT TIME, TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY TOTALPOWERFACTOR ASC LIMIT 1) AS MIN_Q
+                (SELECT "HOUR", TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY TOTALPOWERFACTOR ASC LIMIT 1) AS MIN_Q
             CROSS JOIN
-                (SELECT TIME, TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY TOTALPOWERFACTOR DESC LIMIT 1) AS MAX_Q
+                (SELECT "HOUR", TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY TOTALPOWERFACTOR DESC LIMIT 1) AS MAX_Q
             CROSS JOIN
-                (SELECT TIME, TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
+                (SELECT "HOUR", TOTALPOWERFACTOR FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL ORDER BY "HOUR" DESC LIMIT 1) AS CURRENT_Q
             CROSS JOIN
                 (SELECT SUM(TOTALPOWERFACTOR) AS TOTAL_POWER_FACTOR, COUNT(*) AS CNT FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "DATE" = ? AND TOTALPOWERFACTOR IS NOT NULL GROUP BY "DATE") AS TOTAL_Q
         '''

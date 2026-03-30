@@ -191,3 +191,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- CARRUSEL GLOBAL (Auto-rastreo de Tarjetas) ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Buscamos TODOS los contenedores de tarjetas escondidas del proyecto (Energía, Agua, Gas...)
+    const contenedoresTarjeta = document.querySelectorAll('.hide-scrollbar');
+
+    contenedoresTarjeta.forEach(contenedor => {
+        // 2. Iniciamos un reloj que se mueva cada 4 segundos
+        let autoScroll = setInterval(moverCarrusel, 4000);
+
+        function moverCarrusel() {
+            // Revisa si ya llegamos al final de la pantalla a la derecha
+            if (contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 10) {
+                // Regresa al inicio de golpe (modo loop)
+                contenedor.scrollTo({ left: 0, behavior: 'smooth' });
+            } else {
+                // O desliza el ancho de una tarjeta suavemente a la derecha (~180px)
+                contenedor.scrollBy({ left: 180, behavior: 'smooth' });
+            }
+        }
+
+        // 3. UX de Oro: Si el usuario pone el mouse encima para leer el billete, PAUSAR el carrusel
+        contenedor.addEventListener('mouseenter', () => clearInterval(autoScroll));
+        contenedor.addEventListener('touchstart', () => clearInterval(autoScroll));
+
+        // Y cuando quite el mouse de esa tarjeta, reanudar el paseo suavemente..
+        contenedor.addEventListener('mouseleave', () => {
+            autoScroll = setInterval(moverCarrusel, 4000);
+        });
+        contenedor.addEventListener('touchend', () => {
+            autoScroll = setInterval(moverCarrusel, 4000);
+        });
+    });
+});
