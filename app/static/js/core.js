@@ -10,9 +10,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dropdown = document.getElementById('siteDropdown');
     const dashboardMain = document.getElementById('dashboardMain');
 
-    // Configuración Inicial de Fecha
-    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
-    if(dateInput) dateInput.value = hoy;
+    // Configuración Inicial de Fecha y Límites
+    const fechaHoy = new Date();
+    const hoyStr = fechaHoy.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+
+    // Restamos exactamente 4 meses a la fecha actual
+    const fechaMinima = new Date();
+    fechaMinima.setMonth(fechaMinima.getMonth() - 4);
+    const minStr = fechaMinima.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+
+    if (dateInput) {
+        dateInput.value = hoyStr; // Fecha por defecto: hoy
+        dateInput.max = hoyStr;   // Prohibido seleccionar el futuro
+        dateInput.min = minStr;   // Prohibido viajar en el tiempo hace más de 4 meses
+    }
 
     // 1. Cargar Sitios
     try {
@@ -21,11 +32,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderDropdown(allSites);
     } catch (err) {
         console.error("Error cargando sitios:", err);
-        if(dropdown) dropdown.innerHTML = '<li class="p-3 text-red-500 text-xs">Error cargando sitios</li>';
+        if (dropdown) dropdown.innerHTML = '<li class="p-3 text-red-500 text-xs">Error cargando sitios</li>';
     }
 
     // --- LÓGICA DEL COMBOBOX ---
-    if(siteInput) {
+    if (siteInput) {
         siteInput.addEventListener('focus', () => {
             dropdown.classList.remove('hidden');
             renderDropdown(allSites, siteInput.value);
@@ -34,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         siteInput.addEventListener('input', (e) => {
             dropdown.classList.remove('hidden');
             renderDropdown(allSites, e.target.value);
-            
+
             // Si borra el texto, quitar selección
             if (e.target.value.trim() === '') {
                 hiddenCostCenter.value = '';
@@ -52,12 +63,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function renderDropdown(sites, searchTerm = '') {
-        if(!dropdown) return;
+        if (!dropdown) return;
         dropdown.innerHTML = '';
-        
+
         const term = searchTerm.toLowerCase().trim();
-        const filtered = sites.filter(s => 
-            s.name.toLowerCase().includes(term) || 
+        const filtered = sites.filter(s =>
+            s.name.toLowerCase().includes(term) ||
             String(s.id).toLowerCase().includes(term)
         );
 
@@ -69,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         filtered.forEach(site => {
             const li = document.createElement('li');
             li.className = 'px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0 flex justify-between items-center text-slate-800 dark:text-slate-200';
-            
+
             li.innerHTML = `
                 <span class="font-medium truncate pr-4">${site.name}</span>
                 <span class="text-xs text-slate-400 dark:text-slate-500 shrink-0 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
@@ -81,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 siteInput.value = `${site.name} (${site.id})`;
                 hiddenCostCenter.value = site.id;
                 dropdown.classList.add('hidden');
-                
+
                 // DISPARAR BÚSQUEDA GLOBAL
                 triggerDashboardRefresh();
             });
@@ -91,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- DISPARADORES ---
-    if(dateInput) dateInput.addEventListener('change', triggerDashboardRefresh);
+    if (dateInput) dateInput.addEventListener('change', triggerDashboardRefresh);
 
     function triggerDashboardRefresh() {
         const costCenter = hiddenCostCenter ? hiddenCostCenter.value : null;
@@ -100,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!costCenter) return;
 
         window.showLoading(true);
-        if(dashboardMain) dashboardMain.classList.remove('hidden');
+        if (dashboardMain) dashboardMain.classList.remove('hidden');
         document.getElementById('emptyState')?.classList.add('hidden');
 
         const inputName = siteInput ? siteInput.value : costCenter;
@@ -114,19 +125,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // --- FUNCIONES UTILITARIAS GLOBALES ---
-window.showLoading = function(show) {
+window.showLoading = function (show) {
     const el = document.getElementById('loadingOverlay');
     if (!el) return;
     if (show) el.classList.remove('hidden');
     else el.classList.add('hidden');
 }
 
-window.fetchData = async function(url, costCenter, date) {
+window.fetchData = async function (url, costCenter, date) {
     try {
         const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}`);
-        if(!res.ok) return null;
+        if (!res.ok) return null;
         return await res.json();
-    } catch(e) {
+    } catch (e) {
         return null;
     }
 }
@@ -135,7 +146,7 @@ window.fetchData = async function(url, costCenter, date) {
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Tema oscuro
     const btn = document.getElementById('themeToggle');
-    if(btn) {
+    if (btn) {
         btn.addEventListener('click', () => {
             document.documentElement.classList.toggle('dark');
         });
@@ -154,38 +165,38 @@ document.addEventListener('DOMContentLoaded', () => {
         isSidebarOpen = open;
         if (open) {
             // Icons
-            if(iconHamburger) iconHamburger.classList.add('hidden');
-            if(iconClose) iconClose.classList.remove('hidden');
+            if (iconHamburger) iconHamburger.classList.add('hidden');
+            if (iconClose) iconClose.classList.remove('hidden');
             // Mobile
-            if(sidebar) sidebar.classList.remove('-translate-x-full');
-            if(sidebarOverlay) {
+            if (sidebar) sidebar.classList.remove('-translate-x-full');
+            if (sidebarOverlay) {
                 sidebarOverlay.classList.remove('hidden');
                 setTimeout(() => sidebarOverlay.classList.remove('opacity-0'), 10);
             }
             // Desktop
-            if(sidebar) sidebar.classList.remove('md:-ml-64');
+            if (sidebar) sidebar.classList.remove('md:-ml-64');
         } else {
             // Icons
-            if(iconHamburger) iconHamburger.classList.remove('hidden');
-            if(iconClose) iconClose.classList.add('hidden');
+            if (iconHamburger) iconHamburger.classList.remove('hidden');
+            if (iconClose) iconClose.classList.add('hidden');
             // Mobile
-            if(sidebar) sidebar.classList.add('-translate-x-full');
-            if(sidebarOverlay) {
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (sidebarOverlay) {
                 sidebarOverlay.classList.add('opacity-0');
                 setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
             }
             // Desktop
-            if(sidebar) sidebar.classList.add('md:-ml-64');
+            if (sidebar) sidebar.classList.add('md:-ml-64');
         }
     }
 
-    if(toggleBtn) {
+    if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             setSidebarState(!isSidebarOpen);
         });
     }
 
-    if(sidebarOverlay) {
+    if (sidebarOverlay) {
         sidebarOverlay.addEventListener('click', () => {
             if (isSidebarOpen) setSidebarState(false);
         });
