@@ -9,7 +9,8 @@
     <div class="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
 
         <!-- Consumo Actual -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Consumo Actual</p>
                 <p class="text-xs text-slate-500 mt-1">m³ (Metros cúbicos)</p>
@@ -20,8 +21,35 @@
             </div>
         </div>
 
+        <!-- Precio promedio por m³ -->
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Precio promedio por m³</p>
+                <p class="text-xs text-slate-500 mt-1">MXN</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsGreen" id="aguaKpiAveragePrice">0</p>
+                <p class="text-xs text-slate-500 mt-2">Precio promedio por m³</p>
+            </div>
+        </div>
+
+        <!-- Costo por m³ -->
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Costo por m³</p>
+                <p class="text-xs text-slate-500 mt-1">MXN</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsGreen" id="aguaKpiAveragePrice">0</p>
+                <p class="text-xs text-slate-500 mt-2">Costo por m³</p>
+            </div>
+        </div>
+
         <!-- Objetivo -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Objetivo</p>
                 <p class="text-xs text-slate-500 mt-1">m³</p>
@@ -33,14 +61,15 @@
         </div>
 
         <!-- Cumplimiento -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
                 <p class="text-xs text-slate-500 mt-1">%</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-slate-800 dark:text-white"><span
-                        id="aguaKpiPct">0</span><span class="text-xl text-slate-500">%</span></p>
+                <p class="text-4xl font-light text-slate-800 dark:text-white"><span id="aguaKpiPct">0</span><span
+                        class="text-xl text-slate-500">%</span></p>
                 <p class="text-xs text-slate-500 mt-2">Progreso hídrico del día</p>
             </div>
         </div>
@@ -48,8 +77,14 @@
     </div>
 
     <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </section>
 
@@ -57,7 +92,8 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
     <!-- 1. Gráfica KPI del día (Meta vs Realidad Agua) -->
-    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1 flex flex-col justify-center items-center">
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1 flex flex-col justify-center items-center">
         <h3 class="font-bold text-lg text-slate-800 dark:text-white self-start w-full mb-4">Meta vs Realidad</h3>
         <div class="h-48 w-full relative">
             <canvas id="chartPieAgua"></canvas>
@@ -65,7 +101,8 @@
     </div>
 
     <!-- 2. Barra de Progreso Agua -->
-    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-2 flex flex-col justify-center">
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-2 flex flex-col justify-center">
         <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-6">Nivel de Progreso</h3>
 
         <div class="flex justify-between text-sm mb-3">
@@ -80,7 +117,8 @@
                 class="bg-blue-500 h-8 rounded-full text-sm flex items-center justify-center text-white font-bold transition-all duration-1000 w-0">
                 0%</div>
         </div>
-        <p class="text-xs text-slate-500 mt-4 text-center">Cuando la barra se llena al 100%, el recinto ha superado su objetivo límite para consumo de agua.</p>
+        <p class="text-xs text-slate-500 mt-4 text-center">Cuando la barra se llena al 100%, el recinto ha superado su
+            objetivo límite para consumo de agua.</p>
     </div>
 
 </div>
@@ -88,12 +126,14 @@
 <div class="grid grid-cols-1 gap-6">
 
     <!-- 3. GÁFICA LÍNEAS POR HORA -->
-    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1">
+    <div
+        class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-1">
         <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg text-blue-500 flex items-center gap-2">💧 Consumo Diario por Hora</h3>
             <div class="text-right">
                 <p class="text-xs text-slate-500 dark:text-slate-400">Total Acumulado</p>
-                <p class="text-xl font-bold text-slate-800 dark:text-slate-100"><span id="aguaKpiTotalHora">0</span> m³</p>
+                <p class="text-xl font-bold text-slate-800 dark:text-slate-100"><span id="aguaKpiTotalHora">0</span> m³
+                </p>
             </div>
         </div>
         <div class="h-80 relative">

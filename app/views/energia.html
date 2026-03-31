@@ -9,7 +9,8 @@
     <div class="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
 
         <!-- Consumo Actual -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Consumo Actual</p>
                 <p class="text-xs text-slate-500 mt-1">kWh</p>
@@ -21,7 +22,8 @@
         </div>
 
         <!-- Precio promedio por kWh -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Precio promedio por kWh</p>
                 <p class="text-xs text-slate-500 mt-1">MXN</p>
@@ -33,7 +35,8 @@
         </div>
 
         <!-- Costo por kWh -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Costo por kWh</p>
                 <p class="text-xs text-slate-500 mt-1">MXN</p>
@@ -45,7 +48,8 @@
         </div>
 
         <!-- Objetivo -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Objetivo</p>
                 <p class="text-xs text-slate-500 mt-1">kWh</p>
@@ -57,46 +61,53 @@
         </div>
 
         <!-- Cumplimiento -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
                 <p class="text-xs text-slate-500 mt-1">%</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-slate-800 dark:text-white"><span
-                        id="masterKpiPct">0</span><span class="text-xl text-slate-500">%</span></p>
+                <p class="text-4xl font-light text-slate-800 dark:text-white"><span id="masterKpiPct">0</span><span
+                        class="text-xl text-slate-500">%</span></p>
                 <p class="text-xs text-slate-500 mt-2">Progreso del día</p>
             </div>
         </div>
 
         <!-- PF Max -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <!-- <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Máx)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Máx)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
                 <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMax">-</p>
                 <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMaxTime">-</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- PF Min -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <!-- <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Mín)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Mín)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
                 <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMin">-</p>
                 <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMinTime">-</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- PF Prom -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Prom)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Prom)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
