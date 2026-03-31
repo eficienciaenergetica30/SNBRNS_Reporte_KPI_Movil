@@ -12,3 +12,4 @@ env/
 
 # SAP BTP / Cloud Foundry
 manifest.yml.bak
+.github/copilot-instructions.md

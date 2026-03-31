@@ -25,6 +25,15 @@
     </script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Date Picker en Dark Mode */
+        .dark #datePicker {
+            color-scheme: dark;
+        }
+        .dark #datePicker::-webkit-calendar-picker-indicator {
+            filter: brightness(0) invert(1);
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 
