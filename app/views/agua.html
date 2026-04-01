@@ -3,6 +3,14 @@
 {% set active_page = 'agua' %}
 
 {% block content %}
+
+<!-- ALERTA SIN DATOS -->
+<div id="aguaNoDataAlert" class="hidden bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100 rounded-2xl p-4 mb-6 max-w-6xl mx-auto">
+    <p class="font-semibold">No se encontraron datos para esta fecha y sitio.</p>
+    <p class="text-sm text-slate-600 dark:text-slate-300">Por favor, intente con otra fecha dentro del rango de 4 meses o verifique que los parámetros sean correctos.</p>
+</div>
+
+
 <!-- KPIs Clave (Banner Principal Agua) -->
 <section class="mb-6">
     <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-3">Estadísticas Hídricas</h3>
@@ -22,7 +30,7 @@
         </div>
 
         <!-- Precio promedio por m³ -->
-        <div
+        <!-- <div
             class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Precio promedio por m³</p>
@@ -32,10 +40,10 @@
                 <p class="text-4xl font-light text-sanbornsGreen" id="aguaKpiAveragePrice">0</p>
                 <p class="text-xs text-slate-500 mt-2">Precio promedio por m³</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- Costo por m³ -->
-        <div
+        <!-- <div
             class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Costo por m³</p>
@@ -45,7 +53,7 @@
                 <p class="text-4xl font-light text-sanbornsGreen" id="aguaKpiAveragePrice">0</p>
                 <p class="text-xs text-slate-500 mt-2">Costo por m³</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- Objetivo -->
         <div
@@ -87,6 +95,8 @@
         }
     </style>
 </section>
+
+
 
 <!-- Widgets de Meta y Progreso -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

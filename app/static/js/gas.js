@@ -28,12 +28,60 @@ document.addEventListener('DashboardRefreshRequired', async (e) => {
     }
 });
 
+function showNoDataAlert(show, message = 'No se encontraron datos para esta fecha y sitio.') {
+    const alert = document.getElementById('gasNoDataAlert');
+    if (!alert) return;
+
+    const textEl = alert.querySelector('p');
+    if (textEl) textEl.textContent = message;
+
+    if (show) alert.classList.remove('hidden');
+    else alert.classList.add('hidden');
+}
+
+function setGasNoDataState() {
+    clearGasCharts();
+
+    setEl('masterKpiActual', '0');
+    setEl('masterKpiTarget', '0');
+    setEl('masterKpiPct', '0');
+    setEl('masterKpiCosto', '0');
+    setEl('masterKpiPrecio', '0');
+    setEl('kpiGas', '0 m³');
+
+    const progressBar = document.getElementById('progressBar');
+    const progressActual = document.getElementById('progressActual');
+    const progressTarget = document.getElementById('progressTarget');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.classList.remove('bg-red-600', 'animate-pulse');
+        progressBar.classList.add('bg-blue-500');
+    }
+    if (progressActual) progressActual.textContent = '0';
+    if (progressTarget) progressTarget.textContent = '0';
+}
+
 function updateGasDashboard(data) {
-    if (!data || !data.kpi || !data.hourly) {
-        console.warn("No hay datos de gas para mostrar o la estructura es incorrecta.");
-        clearGasCharts();
+    if (!data) {
+        showNoDataAlert(true, 'No se pudieron obtener los datos del servidor. Por favor, inténtelo nuevamente.');
+        setGasNoDataState();
         return;
     }
+
+    const hasHourly = Array.isArray(data.hourly) && data.hourly.length > 0;
+    const kpiActual = data.kpi && typeof data.kpi.actual === 'number' ? data.kpi.actual : 0;
+    const kpiTarget = data.kpi && typeof data.kpi.target === 'number' ? data.kpi.target : 0;
+    const hasKpi = kpiActual > 0 || kpiTarget > 0;
+
+    if (!hasHourly && !hasKpi) {
+        showNoDataAlert(true, 'No se encontraron datos para esta fecha y sitio. Por favor, pruebe otra fecha o verifique los parámetros.');
+        setGasNoDataState();
+        return;
+    }
+
+    showNoDataAlert(false);
 
     const totalConsumo = data.kpi.actual || 0;
     const totalObjetivo = data.kpi.target || 0;

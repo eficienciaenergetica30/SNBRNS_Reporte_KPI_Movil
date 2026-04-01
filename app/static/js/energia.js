@@ -29,11 +29,65 @@ document.addEventListener('DashboardRefreshRequired', async (e) => {
     }
 });
 
+function showNoDataAlert(show, message = 'No se encontraron datos para esta fecha y sitio.') {
+    const alert = document.getElementById('energiaNoDataAlert');
+    if (!alert) return;
+
+    const textEl = alert.querySelector('p');
+    if (textEl) textEl.textContent = message;
+
+    if (show) alert.classList.remove('hidden');
+    else alert.classList.add('hidden');
+}
+
+function setEnergyNoDataState() {
+    clearCharts();
+
+    setEl('masterKpiActual', '0');
+    setEl('masterKpiTarget', '0');
+    setEl('masterKpiAveragePrice', '0');
+    setEl('masterKpiCostPerKwh', '0');
+    setEl('masterKpiPct', '0');
+    setEl('masterKpiPfMax', '-');
+    setEl('masterKpiPfMin', '-');
+    setEl('masterKpiPfAvg', '-');
+    setEl('masterKpiPfMaxTime', '-');
+    setEl('masterKpiPfMinTime', '-');
+    setEl('kpiEnergy', '0 kWh');
+
+    const progressBar = document.getElementById('progressBar');
+    const progressActual = document.getElementById('progressActual');
+    const progressTarget = document.getElementById('progressTarget');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.classList.remove('bg-red-600', 'animate-pulse');
+        progressBar.classList.add('bg-sanbornsRed');
+    }
+    if (progressActual) progressActual.textContent = '0';
+    if (progressTarget) progressTarget.textContent = '0';
+}
+
 function updateEnergyDashboard(energy) {
     if (!energy) {
-        clearCharts();
+        showNoDataAlert(true, 'No se pudieron obtener los datos del servidor. Por favor, inténtelo nuevamente.');
+        setEnergyNoDataState();
         return;
     }
+
+    const hasHourly = Array.isArray(energy.hourly) && energy.hourly.length > 0;
+    const kpiActual = energy.kpi && typeof energy.kpi.actual === 'number' ? energy.kpi.actual : 0;
+    const kpiTarget = energy.kpi && typeof energy.kpi.target === 'number' ? energy.kpi.target : 0;
+    const hasKpi = kpiActual > 0 || kpiTarget > 0;
+
+    if (!hasHourly && !hasKpi) {
+        showNoDataAlert(true, 'No se encontraron datos para esta fecha y sitio. Por favor, pruebe otra fecha o verifique los parámetros.');
+        setEnergyNoDataState();
+        return;
+    }
+
+    showNoDataAlert(false);
 
     // Actualizar Tarjetas Maestras
     if (energy.kpi) {
