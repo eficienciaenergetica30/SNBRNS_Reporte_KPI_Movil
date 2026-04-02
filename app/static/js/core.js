@@ -143,12 +143,33 @@ window.fetchData = async function (url, costCenter, date) {
 }
 
 // --- LOGICA DE UI (TEMA OSCURO Y SIDEBAR) ---
+const THEME_KEY = 'themePreference';
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Tema oscuro
+    // 1. Tema oscuro con persistencia
     const btn = document.getElementById('themeToggle');
+
+    function applySavedTheme() {
+        const savedTheme = localStorage.getItem(THEME_KEY);
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    }
+
+    function saveTheme(isDark) {
+        localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+    }
+
+    applySavedTheme();
+
     if (btn) {
         btn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.toggle('dark');
+            saveTheme(isDark);
         });
     }
 
