@@ -1,0 +1,40 @@
+{
+  "xsappname": "snbrns-reporte-kpis-dev",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.Display",
+      "description": "Read dashboard data"
+    },
+    {
+      "name": "$XSAPPNAME.Admin",
+      "description": "Administrative operations"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "Viewer",
+      "description": "Standard dashboard access",
+      "scope-references": [
+        "$XSAPPNAME.Display",
+        "uaa.user"
+      ]
+    },
+    {
+      "name": "Administrator",
+      "description": "Full dashboard access",
+      "scope-references": [
+        "$XSAPPNAME.Display",
+        "$XSAPPNAME.Admin",
+        "uaa.user"
+      ]
+    }
+  ],
+  "oauth2-configuration": {
+    "token-validity": 3600,
+    "refresh-token-validity": 2592000,
+    "redirect-uris": [
+      "https://*.ondemand.com/**"
+    ]
+  }
+}

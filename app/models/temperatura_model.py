@@ -117,3 +117,60 @@ class TemperaturaModel:
                 cursor.close()
             if hana:
                 hana.close()
+
+    @staticmethod
+    def get_sites():
+        """
+        Obtiene la lista de sitios únicamente con datos en la vista de Temperatura.
+        Retorna lista de dicts con 'id' (COSTCENTER) y 'name' (nombre del sitio).
+        
+        Nota: La vista de Temperatura puede usar un nombre diferente para el campo de sitio.
+        Se intenta con SITE_NAME primero, y si falla, se usa solo COSTCENTER.
+        """
+        hana = None
+        cursor = None
+        try:
+            hana = get_db_connection()
+            if not hana:
+                return None
+            
+            schema = os.getenv("HANA_SCHEMA")
+            view = os.getenv("HANA_VIEW_TEMPERATURE")
+            
+            cursor = hana.cursor()
+            
+            # Intento 1: Usar NAME (columna disponible en CV_TEMPERATURE_CUBE)
+            try:
+                query = (
+                    f'SELECT DISTINCT "COSTCENTER", "NAME" '
+                    f'FROM "{schema}"."{view}" '
+                    f'WHERE "NAME" IS NOT NULL AND "COSTCENTER" IS NOT NULL '
+                    f'ORDER BY "NAME" ASC'
+                )
+                cursor.execute(query)
+                sites = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
+                if sites:
+                    return sites
+            except:
+                pass  # Si SITE_NAME no existe, intentar otra estrategia
+            
+            # Intento 2: Si SITE_NAME no existe, retornar solo COSTCENTER
+            # (fallback defensivo para que no se rompa la app)
+            query = (
+                f'SELECT DISTINCT "COSTCENTER" '
+                f'FROM "{schema}"."{view}" '
+                f'WHERE "COSTCENTER" IS NOT NULL '
+                f'ORDER BY "COSTCENTER" ASC'
+            )
+            cursor.execute(query)
+            sites = [{"id": row[0], "name": f"Sitio {row[0]}"} for row in cursor.fetchall()]
+            return sites if sites else None
+            
+        except Exception as e:
+            current_app.logger.error(f"Error en TemperaturaModel.get_sites: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            if hana:
+                hana.close()
