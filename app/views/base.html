@@ -57,19 +57,19 @@
 
                 <a href="{{ url_for('main.energia') }}"
                     class="{{ active_class if active_page == 'energia' else inactive_class }}">
-                    <span class="text-xl">⚡</span> Dashboard Eléctrico
+                    <span class="text-xl">⚡</span> Dashboard <br> Electricidad
                 </a>
                 <a href="{{ url_for('main.agua') }}"
                     class="{{ active_class if active_page == 'agua' else inactive_class }}">
-                    <span class="text-xl">💧</span> DB Agua
+                    <span class="text-xl">💧</span> Dashboard <br> Agua
                 </a>
                 <a href="{{ url_for('main.gas') }}"
                     class="{{ active_class if active_page == 'gas' else inactive_class }}">
-                    <span class="text-xl">🔥</span> DB Gas
+                    <span class="text-xl">🔥</span> Dashboard <br> Gas
                 </a>
                 <a href="{{ url_for('main.temperatura') }}"
                     class="{{ active_class if active_page == 'temperatura' else inactive_class }}">
-                    <span class="text-xl">🌡️</span> DB Temperatura
+                    <span class="text-xl">🌡️</span> Dashboard <br> Temperatura
                 </a>
             </nav>
         </aside>
@@ -114,7 +114,14 @@
                         <div class="relative">
                             <input type="text" id="siteSearchInput" placeholder="Escribe para buscar o selecciona..."
                                 autocomplete="off"
-                                class="w-full bg-slate-50 dark:bg-darkCard border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sanbornsRed outline-none transition-all pr-10">
+                                class="w-full bg-slate-50 dark:bg-darkCard border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sanbornsRed outline-none transition-all pr-20">
+                            <!-- Botón X para limpiar -->
+                            <button id="clearSiteSearchBtn"
+                                class="absolute inset-y-0 right-12 flex items-center pr-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors hidden">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
                             <!-- Flechita -->
                             <div
                                 class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
@@ -140,6 +147,21 @@
                         </label>
                         <input type="date" id="datePicker"
                             class="w-full bg-slate-50 dark:bg-darkCard border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-white focus:ring-2 focus:ring-sanbornsRed outline-none appearance-none">
+                    </div>
+
+                    <div class="relative w-full sm:w-auto min-w-56">
+                        <label
+                            class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">
+                            Usuario
+                        </label>
+                        <div
+                            class="w-full bg-slate-50 dark:bg-darkCard border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                            <div class="flex flex-col gap-1">
+                                <span id="userIdentityText">Usuario no identificado</span>
+                                <span id="userIdentitySource"
+                                    class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Source: anonymous</span>
+                            </div>
+                        </div>
                     </div>
 
                 </div>

@@ -93,3 +93,40 @@ class GasModel:
             if hana:
                 hana.close()
 
+    @staticmethod
+    def get_sites():
+        """
+        Obtiene la lista de sitios únicamente con datos en la vista de Gas.
+        Retorna lista de dicts con 'id' (COSTCENTER) y 'name' (SITE_NAME).
+        """
+        hana = None
+        cursor = None
+        try:
+            hana = get_db_connection()
+            if not hana:
+                return None
+            
+            schema = os.getenv("HANA_SCHEMA")
+            view = os.getenv("HANA_VIEW_GAS_HOUR")
+            
+            cursor = hana.cursor()
+            
+            query = (
+                f'SELECT DISTINCT "COSTCENTER", "SITE_NAME" '
+                f'FROM "{schema}"."{view}" '
+                f'WHERE "SITE_NAME" IS NOT NULL AND "COSTCENTER" IS NOT NULL '
+                f'ORDER BY "SITE_NAME" ASC'
+            )
+            
+            cursor.execute(query)
+            sites = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
+            return sites
+        except Exception as e:
+            current_app.logger.error(f"Error en GasModel.get_sites: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            if hana:
+                hana.close()
+

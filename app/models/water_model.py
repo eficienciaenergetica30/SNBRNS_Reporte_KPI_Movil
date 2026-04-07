@@ -64,3 +64,33 @@ def get_water_data(costcenter, date):
     except Exception as e:
         print(f"Error queries water: {e}")
         return None
+
+def get_sites():
+    """
+    Trae ÚNICAMENTE los sitios que tienen datos en la vista de Agua.
+    Retorna lista de dicts con 'id' (COSTCENTER) y 'name' (SITE_NAME).
+    """
+    conn = get_db_connection()
+    if conn is None:
+        return None
+
+    schema = os.getenv("HANA_SCHEMA")
+    view = os.getenv("HANA_VIEW_WATER")
+    
+    query = (
+        f'SELECT DISTINCT "COSTCENTER", "SITE_NAME" '
+        f'FROM "{schema}"."{view}" '
+        f'WHERE "SITE_NAME" IS NOT NULL AND "COSTCENTER" IS NOT NULL '
+        f'ORDER BY "SITE_NAME" ASC'
+    )
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        sites = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return sites
+    except Exception as e:
+        print(f"Error al obtener sitios agua: {e}")
+        return None

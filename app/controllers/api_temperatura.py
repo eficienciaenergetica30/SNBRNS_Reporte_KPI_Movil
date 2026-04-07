@@ -21,3 +21,17 @@ def get_temperatura_data():
     except Exception as e:
         current_app.logger.error(f"Error en el endpoint /api/temperatura: {e}")
         return jsonify({"error": "Ocurrió un error interno en el servidor."}), 500
+
+@api_temperatura_bp.route('/sites/temperatura', methods=['GET'])
+def get_temperatura_sites():
+    """
+    Devuelve el catálogo de sitios que tienen datos en Temperatura
+    """
+    try:
+        data = TemperaturaModel.get_sites()
+        if data is None:
+            return jsonify({"error": "Error al obtener sitios de temperatura"}), 500
+        return jsonify(data)
+    except Exception as e:
+        current_app.logger.error(f"Error en el endpoint /api/sites/temperatura: {e}")
+        return jsonify({"error": "Ocurrió un error interno en el servidor."}), 500
