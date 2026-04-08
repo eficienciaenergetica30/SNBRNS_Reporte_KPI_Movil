@@ -21,7 +21,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setUserIdentitySource(source) {
         if (!userIdentitySource) return;
 
-        const normalized = (typeof source === 'string' && source.trim()) ? source.trim().toLowerCase() : 'anonymous';
+        const rawValue = (typeof source === 'string' && source.trim()) ? source.trim() : '';
+        if (rawValue.includes('@')) {
+            userIdentitySource.textContent = rawValue;
+            return;
+        }
+
+        const normalized = rawValue ? rawValue.toLowerCase() : 'anonymous';
         const labels = {
             launchpad: 'Source: launchpad',
             token: 'Source: token',
@@ -51,7 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const data = await response.json();
             setUserIdentityLabel(data && data.label ? data.label : 'Usuario no identificado');
-            setUserIdentitySource(data && data.source ? data.source : 'anonymous');
+            const userEmail = data && data.email ? String(data.email).trim() : '';
+            setUserIdentitySource(userEmail || (data && data.source ? data.source : 'anonymous'));
         } catch (err) {
             setUserIdentityLabel('Usuario no identificado');
             setUserIdentitySource('anonymous');
