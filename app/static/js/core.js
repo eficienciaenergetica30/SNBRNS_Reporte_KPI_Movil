@@ -25,7 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Remover puntos, guiones bajos, comas y tomar los primeros 20 caracteres
         return localPart
             .substring(0, 20)
-            .replace(/[._,]/g, '');
+            .replace(/[._,]/g, '')
+            .toUpperCase();
     }
 
     function setUserIdentitySource(source) {
