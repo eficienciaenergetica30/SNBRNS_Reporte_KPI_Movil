@@ -31,6 +31,26 @@ cf set-env snbrns-reporte-kpis-dev HANA_SCHEMA <schema>
 
 Si prefieres, puedes usar `HANA_USER` y `HANA_PASSWORD` en lugar de `HANA_UID` y `HANA_PWD`.
 
+### Modo de autenticacion de BD (`DB_AUTH_MODE`)
+
+La aplicacion soporta tres modos:
+
+- `technical`: usa el usuario tecnico (`HANA_UID`/`HANA_USER`).
+- `derived`: usa el usuario derivado del correo del usuario autenticado en Work Zone.
+- `auto`: intenta `derived`; si no puede derivar usuario, cae a `technical`.
+
+Configuracion recomendada:
+
+- Local/.env: `DB_AUTH_MODE=technical`
+- Cloud Foundry (Work Zone): `DB_AUTH_MODE=derived`
+
+Ejemplo en CF:
+
+```bash
+cf set-env snbrns-reporte-kpis-dev DB_AUTH_MODE derived
+cf restage snbrns-reporte-kpis-dev
+```
+
 ## 4) Desplegar app Flask
 
 ```bash

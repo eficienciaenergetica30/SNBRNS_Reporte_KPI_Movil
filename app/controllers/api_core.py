@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 from app.models.core_model import get_sites, get_max_date
-from app.models.db_connector import test_db_connection
+from app.models.db_connector import derive_db_user_from_email, test_db_connection
 
 api_core_bp = Blueprint('api_core', __name__)
 
@@ -25,7 +25,7 @@ def _decode_jwt_payload(token):
         return None
 
 
-def _build_user_context(authenticated, source, user_id='', full_name='', email='', warnings=None):
+def _build_user_context(authenticated, source, user_id='', full_name='', email='', derived_user='', warnings=None):
     label = full_name or user_id or 'Usuario no identificado'
     return {
         "authenticated": authenticated,
@@ -33,9 +33,75 @@ def _build_user_context(authenticated, source, user_id='', full_name='', email='
         "id": user_id,
         "fullName": full_name,
         "email": email,
+        "derivedUser": derived_user,
         "label": label,
         "warnings": warnings or []
     }
+
+
+def _resolve_user_context():
+    """Obtiene contexto de usuario con fallback seguro y usuario DB derivado."""
+    # 1) Headers típicos de Launchpad / Approuter
+    user_id = (request.headers.get('x-sap-user') or '').strip()
+    full_name = (request.headers.get('x-sap-user-name') or '').strip()
+    email = (request.headers.get('x-sap-user-email') or '').strip()
+
+    if user_id or full_name or email:
+        return _build_user_context(
+            True,
+            'launchpad',
+            user_id,
+            full_name,
+            email,
+            derive_db_user_from_email(email),
+        )
+
+    # 2) Bearer token JWT
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+        payload = _decode_jwt_payload(token)
+        if payload:
+            token_user_id = str(payload.get('sub') or payload.get('user_name') or payload.get('user_id') or '').strip()
+            token_email = str(payload.get('email') or payload.get('mail') or '').strip()
+            token_full_name = str(payload.get('name') or '').strip()
+
+            if not token_full_name:
+                given_name = str(payload.get('given_name') or '').strip()
+                family_name = str(payload.get('family_name') or '').strip()
+                token_full_name = f"{given_name} {family_name}".strip()
+
+            if token_user_id or token_full_name or token_email:
+                return _build_user_context(
+                    True,
+                    'token',
+                    token_user_id,
+                    token_full_name,
+                    token_email,
+                    derive_db_user_from_email(token_email),
+                )
+
+    # 3) Fallback local para desarrollo
+    local_name = (os.getenv('APP_LOCAL_USER_NAME') or '').strip()
+    local_email = (os.getenv('APP_LOCAL_USER_EMAIL') or '').strip()
+    local_id = (os.getenv('APP_LOCAL_USER_ID') or '').strip()
+
+    if local_id or local_name or local_email:
+        return _build_user_context(
+            False,
+            'local',
+            local_id,
+            local_name,
+            local_email,
+            derive_db_user_from_email(local_email),
+        )
+
+    # 4) Usuario anónimo
+    return _build_user_context(
+        False,
+        'anonymous',
+        warnings=["No user identity found."],
+    )
 
 @api_core_bp.route('/max-date')
 def max_date():
@@ -79,42 +145,62 @@ def user_context():
     Siempre retorna HTTP 200.
     """
     try:
-        # 1) Headers típicos de Launchpad / Approuter
-        user_id = (request.headers.get('x-sap-user') or '').strip()
-        full_name = (request.headers.get('x-sap-user-name') or '').strip()
-        email = (request.headers.get('x-sap-user-email') or '').strip()
-
-        if user_id or full_name or email:
-            return jsonify(_build_user_context(True, 'launchpad', user_id, full_name, email)), 200
-
-        # 2) Bearer token JWT
-        auth_header = request.headers.get('Authorization', '')
-        if auth_header.lower().startswith('bearer '):
-            token = auth_header[7:].strip()
-            payload = _decode_jwt_payload(token)
-            if payload:
-                token_user_id = str(payload.get('sub') or payload.get('user_name') or payload.get('user_id') or '').strip()
-                token_email = str(payload.get('email') or payload.get('mail') or '').strip()
-                token_full_name = str(payload.get('name') or '').strip()
-
-                if not token_full_name:
-                    given_name = str(payload.get('given_name') or '').strip()
-                    family_name = str(payload.get('family_name') or '').strip()
-                    token_full_name = f"{given_name} {family_name}".strip()
-
-                if token_user_id or token_full_name or token_email:
-                    return jsonify(_build_user_context(True, 'token', token_user_id, token_full_name, token_email)), 200
-
-        # 3) Fallback local para desarrollo
-        local_name = (os.getenv('APP_LOCAL_USER_NAME') or '').strip()
-        local_email = (os.getenv('APP_LOCAL_USER_EMAIL') or '').strip()
-        local_id = (os.getenv('APP_LOCAL_USER_ID') or '').strip()
-
-        if local_id or local_name or local_email:
-            return jsonify(_build_user_context(False, 'local', local_id, local_name, local_email)), 200
-
-        # 4) Usuario anónimo
-        return jsonify(_build_user_context(False, 'anonymous', warnings=["No user identity found."])), 200
-
+        return jsonify(_resolve_user_context()), 200
     except Exception as e:
         return jsonify(_build_user_context(False, 'anonymous', warnings=[f"user-context error: {e}"])), 200
+
+
+@api_core_bp.route('/bootstrap-context')
+def bootstrap_context():
+    """
+    Preflight para UI:
+    - Resuelve identidad
+    - Deriva usuario DB
+    - Prueba conexion HANA segun modo de autenticacion
+    Siempre retorna HTTP 200 con canProceed/dbReady.
+    """
+    try:
+        user_ctx = _resolve_user_context()
+        db_auth_mode = (os.getenv('DB_AUTH_MODE') or 'technical').strip().lower()
+        if db_auth_mode not in {'technical', 'derived', 'auto'}:
+            db_auth_mode = 'technical'
+
+        derived_user = (user_ctx.get('derivedUser') or '').strip()
+
+        if db_auth_mode == 'derived' and not user_ctx.get('authenticated', False):
+            return jsonify({
+                "userContext": user_ctx,
+                "dbAuthMode": db_auth_mode,
+                "dbReady": False,
+                "canProceed": False,
+                "message": "Usuario no autenticado para conexion DB derivada.",
+            }), 200
+
+        if db_auth_mode == 'derived' and not derived_user:
+            return jsonify({
+                "userContext": user_ctx,
+                "dbAuthMode": db_auth_mode,
+                "dbReady": False,
+                "canProceed": False,
+                "message": "No se pudo derivar usuario DB desde el correo.",
+            }), 200
+
+        test_user = derived_user if db_auth_mode in {'derived', 'auto'} else ''
+        success, message = test_db_connection(db_user=test_user)
+
+        return jsonify({
+            "userContext": user_ctx,
+            "dbAuthMode": db_auth_mode,
+            "dbReady": success,
+            "canProceed": success,
+            "message": message,
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "userContext": _build_user_context(False, 'anonymous', warnings=[f"bootstrap error: {e}"]),
+            "dbAuthMode": (os.getenv('DB_AUTH_MODE') or 'technical').strip().lower(),
+            "dbReady": False,
+            "canProceed": False,
+            "message": f"bootstrap-context error: {e}",
+        }), 200
