@@ -1,6 +1,6 @@
 import datetime
 from flask import Blueprint, jsonify, request
-from app.models.energy_model import get_energy_data
+from app.models.energy_model import get_energy_data, get_sites
 
 api_energy_bp = Blueprint('api_energy', __name__)
 
@@ -13,3 +13,13 @@ def energy_today():
         
     data = get_energy_data(costcenter, date)
     return jsonify(data) if data else (jsonify({"error": "Error interno"}), 500)
+
+@api_energy_bp.route('/sites/energy')
+def get_energy_sites():
+    """
+    Devuelve el catálogo de sitios que tienen datos en Energía
+    """
+    data = get_sites()
+    if data is None:
+        return jsonify({"error": "Error al obtener sitios de energía"}), 500
+    return jsonify(data)

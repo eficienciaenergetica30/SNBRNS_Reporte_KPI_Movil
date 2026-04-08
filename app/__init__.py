@@ -15,10 +15,14 @@ def create_app():
     from app.controllers.api_core import api_core_bp
     from app.controllers.api_energy import api_energy_bp
     from app.controllers.api_water import api_water_bp
+    from app.controllers.api_gas import api_gas_bp
+    from app.controllers.api_temperatura import api_temperatura_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_core_bp, url_prefix='/api')
     app.register_blueprint(api_energy_bp, url_prefix='/api')
     app.register_blueprint(api_water_bp, url_prefix='/api')
+    app.register_blueprint(api_gas_bp, url_prefix='/api')
+    app.register_blueprint(api_temperatura_bp, url_prefix='/api')
 
     return app

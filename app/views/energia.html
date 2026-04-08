@@ -3,25 +3,61 @@
 {% set active_page = 'energia' %}
 
 {% block content %}
+
+<!-- ALERTA SIN DATOS -->
+<div id="energiaNoDataAlert" class="hidden bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100 rounded-2xl p-4 mb-6 max-w-6xl mx-auto">
+    <p class="font-semibold">No se encontraron datos para esta fecha y sitio.</p>
+    <p class="text-sm text-slate-600 dark:text-slate-300">Por favor, intente con otra fecha dentro del rango de 4 meses o verifique que los parámetros sean correctos.</p>
+</div>
+
+
 <!-- KPIs Clave (Banner Principal) -->
 <section class="mb-6">
     <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-3">KPIs Clave</h3>
     <div class="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
 
         <!-- Consumo Actual -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Consumo Actual</p>
                 <p class="text-xs text-slate-500 mt-1">kWh</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-sanbornsRed" id="masterKpiActual">0</p>
+                <p class="text-4xl font-light text-darkBg" id="masterKpiActual">0</p>
                 <p class="text-xs text-slate-500 mt-2">kWh consumidos</p>
             </div>
         </div>
 
+        <!-- Precio promedio por kWh -->
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Precio promedio por kWh</p>
+                <p class="text-xs text-slate-500 mt-1">MXN</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsGreen" id="masterKpiAveragePrice">0</p>
+                <p class="text-xs text-slate-500 mt-2">Precio promedio por kWh</p>
+            </div>
+        </div>
+
+        <!-- Costo por kWh -->
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Costo por kWh</p>
+                <p class="text-xs text-slate-500 mt-1">MXN</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsGreen" id="masterKpiCostPerKwh">0</p>
+                <p class="text-xs text-slate-500 mt-2">Costo por kWh</p>
+            </div>
+        </div>
+
         <!-- Objetivo -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Objetivo</p>
                 <p class="text-xs text-slate-500 mt-1">kWh</p>
@@ -33,46 +69,53 @@
         </div>
 
         <!-- Cumplimiento -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
                 <p class="text-xs text-slate-500 mt-1">%</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-slate-800 dark:text-white"><span
-                        id="masterKpiPct">0</span><span class="text-xl text-slate-500">%</span></p>
+                <p class="text-4xl font-light text-slate-800 dark:text-white"><span id="masterKpiPct">0</span><span
+                        class="text-xl text-slate-500">%</span></p>
                 <p class="text-xs text-slate-500 mt-2">Progreso del día</p>
             </div>
         </div>
 
         <!-- PF Max -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <!-- <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Máx)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Máx)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
                 <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMax">-</p>
                 <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMaxTime">-</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- PF Min -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <!-- <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Mín)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Mín)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
                 <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiPfMin">-</p>
                 <p class="text-xs text-slate-500 mt-2 truncate" id="masterKpiPfMinTime">-</p>
             </div>
-        </div>
+        </div> -->
 
         <!-- PF Prom -->
-        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div
+            class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Prom)</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Factor Potencia<br>(Prom)
+                </p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
             </div>
             <div class="mt-8">
@@ -95,6 +138,8 @@
         }
     </style>
 </section>
+
+
 
 <!-- Widgets de Meta y Progreso -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

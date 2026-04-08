@@ -1,5 +1,5 @@
 applications:
-  - name: eco-monitor-app
+  - name: snbrns-reporte-kpis-dev
     path: .
     memory: 256M
     instances: 1
@@ -7,5 +7,7 @@ applications:
       - python_buildpack
     env:
       OPTIMIZE_PACKAGING: true
+      XSAPPNAME: snbrns-reporte-kpis-dev
+      PYTHONUNBUFFERED: "1"
     services:
-      - nombre-de-tu-instancia-hana-cloud  # El nombre exacto en tu subaccount
+      - snbrns-reporte-kpis-dev-xsuaa

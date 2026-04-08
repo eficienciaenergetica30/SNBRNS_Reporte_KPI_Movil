@@ -1,9 +1,138 @@
 {% extends "base.html" %}
 {% set active_page = 'temperatura' %}
+
 {% block content %}
-<div class="flex flex-col items-center justify-center p-12 text-slate-500 text-center bg-white dark:bg-darkCard rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-    <span class="text-6xl mb-4">🌡️</span>
-    <h3 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Módulo de Temperatura</h3>
-    <p>Este módulo será construido en la siguiente fase.</p>
+
+<!-- Selector de Bloque -->
+<div class="flex flex-wrap gap-2 mb-6">
+    <button onclick="setBlock(1)" id="btnBlock1"
+        class="block-btn px-4 py-2 rounded-xl text-sm font-semibold border border-sanbornsRed dark:border-white bg-white dark:bg-darkCard text-slate-600 dark:text-slate-300 transition-colors">
+        Tienda
+    </button>
+    <button onclick="setBlock(2)" id="btnBlock2"
+        class="block-btn px-4 py-2 rounded-xl text-sm font-semibold border border-sanbornsRed dark:border-white bg-white dark:bg-darkCard text-slate-600 dark:text-slate-300 transition-colors">
+        Bar
+    </button>
+    <button onclick="setBlock(3)" id="btnBlock3"
+        class="block-btn px-4 py-2 rounded-xl text-sm font-semibold border border-sanbornsRed dark:border-white bg-white dark:bg-darkCard text-slate-600 dark:text-slate-300 transition-colors">
+        Restaurante
+    </button>
+    <button onclick="setBlock(13)" id="btnBlock13"
+        class="block-btn px-4 py-2 rounded-xl text-sm font-semibold border border-sanbornsRed dark:border-white bg-white dark:bg-darkCard text-slate-600 dark:text-slate-300 transition-colors">
+        Cámara de Conservación
+    </button>
+    <button onclick="setBlock(27)" id="btnBlock27"
+        class="block-btn px-4 py-2 rounded-xl text-sm font-semibold border border-sanbornsRed dark:border-white bg-white dark:bg-darkCard text-slate-600 dark:text-slate-300 transition-colors">
+        Cámara de Congelación
+    </button>
 </div>
+
+<!-- KPIs de Temperatura -->
+<section class="mb-6">
+    <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-3">KPIs Clave</h3>
+    <div class="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+
+        <!-- Temperatura Actual -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Actual</p>
+                <p class="text-xs text-slate-500 mt-1">Ahora</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="tempKpiActual">--</p>
+                <p class="text-xs text-slate-500 mt-2" id="tempKpiActualTime">--</p>
+            </div>
+        </div>
+
+        <!-- Temperatura Máxima -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Máx</p>
+                <p class="text-xs text-slate-500 mt-1">Hoy</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-red-500" id="tempKpiMax">--</p>
+                <p class="text-xs text-slate-500 mt-2" id="tempKpiMaxTime">--</p>
+            </div>
+        </div>
+
+        <!-- Temperatura Mínima -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Mín</p>
+                <p class="text-xs text-slate-500 mt-1">Hoy</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-sanbornsGreen" id="tempKpiMin">--</p>
+                <p class="text-xs text-slate-500 mt-2" id="tempKpiMinTime">--</p>
+            </div>
+        </div>
+
+        <!-- Temperatura Promedio -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Promedio</p>
+                <p class="text-xs text-slate-500 mt-1">°C</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="tempKpiAvg">--</p>
+                <p class="text-xs text-slate-500 mt-2">Promedio del día</p>
+            </div>
+        </div>
+
+        <!-- MinMax (Rango) -->
+        <div class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+            <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">MinMax</p>
+                <p class="text-xs text-slate-500 mt-1">Rango</p>
+            </div>
+            <div class="mt-8">
+                <p class="text-4xl font-light text-blue-500" id="tempKpiRange">--</p>
+                <p class="text-xs text-slate-500 mt-2">Diferencia</p>
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</section>
+
+<!-- Barra de rango de temperatura -->
+<div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6">
+    <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4">Rango de Temperatura del Día</h3>
+    <div class="flex justify-between text-sm mb-2">
+        <span id="tempRefMin" class="text-slate-500 dark:text-slate-400">-- (Mín)</span>
+        <span class="font-semibold text-slate-700 dark:text-slate-200">Promedio: <span id="tempBarLabel">--°C</span></span>
+        <span id="tempRefMax" class="text-slate-500 dark:text-slate-400">-- (Máx)</span>
+    </div>
+    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-8 overflow-hidden shadow-inner">
+        <div id="tempProgressBar"
+            class="bg-blue-500 h-8 rounded-full text-sm flex items-center justify-center text-white font-bold transition-all duration-1000 w-0">
+            --
+        </div>
+    </div>
+    <p class="text-xs mt-2 text-center font-medium" id="tempRangeStatus"></p>
+</div>
+
+<!-- Gráfica por hora -->
+<div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-blue-500 flex items-center gap-2">🌡️ Temperatura por Hora</h3>
+        <div class="text-right">
+            <p class="text-xs text-slate-500 dark:text-slate-400">Promedio del día</p>
+            <p class="text-xl font-bold text-slate-800 dark:text-slate-100"><span id="tempKpiAvgChart">--</span> °C</p>
+        </div>
+    </div>
+    <div class="h-80 relative">
+        <canvas id="chartTemperatura"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/temperatura.js') }}"></script>
 {% endblock %}

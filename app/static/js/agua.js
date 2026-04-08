@@ -29,11 +29,64 @@ document.addEventListener('DashboardRefreshRequired', async (e) => {
     }
 });
 
+function showNoDataAlert(show, message = 'No se encontraron datos para esta fecha y sitio.') {
+    const alert = document.getElementById('aguaNoDataAlert');
+    if (!alert) return;
+
+    const textEl = alert.querySelector('p');
+    if (textEl) textEl.textContent = message;
+
+    if (show) alert.classList.remove('hidden');
+    else alert.classList.add('hidden');
+}
+
+function setWaterNoDataState() {
+    clearCharts();
+
+    setEl('aguaKpiActual', '0');
+    setEl('aguaKpiTarget', '0');
+    setEl('aguaKpiPct', '0');
+    setEl('aguaKpiTotalHora', '0');
+
+    const progressBar = document.getElementById('pbAguaBar');
+    const progressActual = document.getElementById('pbAguaActual');
+    const progressTarget = document.getElementById('pbAguaTarget');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.classList.remove('bg-red-600', 'animate-pulse');
+        progressBar.classList.add('bg-blue-500');
+    }
+    if (progressActual) {
+        progressActual.textContent = '0';
+        progressActual.classList.remove('text-red-600');
+        progressActual.classList.add('text-blue-500');
+    }
+    if (progressTarget) {
+        progressTarget.textContent = '0';
+    }
+}
+
 function updateWaterDashboard(water) {
     if (!water) {
-        clearCharts();
+        showNoDataAlert(true, 'No se pudieron obtener los datos del servidor. Por favor, inténtelo nuevamente.');
+        setWaterNoDataState();
         return;
     }
+
+    const hasHourly = Array.isArray(water.hourly) && water.hourly.length > 0;
+    const kpiActual = water.kpi && typeof water.kpi.actual === 'number' ? water.kpi.actual : 0;
+    const kpiTarget = water.kpi && typeof water.kpi.target === 'number' ? water.kpi.target : 0;
+    const hasKpi = kpiActual > 0 || kpiTarget > 0;
+
+    if (!hasHourly && !hasKpi) {
+        showNoDataAlert(true, 'No se encontraron datos para esta fecha y sitio. Por favor, pruebe otra fecha o verifique los parámetros.');
+        setWaterNoDataState();
+        return;
+    }
+
+    showNoDataAlert(false);
 
     // Actualizar Tarjetas Maestras
     if (water.kpi) {

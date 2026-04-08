@@ -9,16 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // ESCUCHAMOS EL EVENTO DESDE CORE.JS
 document.addEventListener('DashboardRefreshRequired', async (e) => {
     const { costCenter, date, inputName } = e.detail;
-    
+
     try {
         const energy = await window.fetchData('/api/energy/today', costCenter, date);
 
-        const validSiteName = (energy && energy.site_name && energy.site_name !== 'Sitio Desconocido') 
-                                ? energy.site_name 
-                                : inputName;
-        
+        const validSiteName = (energy && energy.site_name && energy.site_name !== 'Sitio Desconocido')
+            ? energy.site_name
+            : inputName;
+
         const titleEl = document.getElementById('dashboardTitle');
-        if(titleEl) titleEl.textContent = `Dashboard Eléctrico: ${validSiteName}`;
+        if (titleEl) titleEl.textContent = `Dashboard Eléctrico: ${validSiteName}`;
 
         updateEnergyDashboard(energy);
 
@@ -29,11 +29,65 @@ document.addEventListener('DashboardRefreshRequired', async (e) => {
     }
 });
 
+function showNoDataAlert(show, message = 'No se encontraron datos para esta fecha y sitio.') {
+    const alert = document.getElementById('energiaNoDataAlert');
+    if (!alert) return;
+
+    const textEl = alert.querySelector('p');
+    if (textEl) textEl.textContent = message;
+
+    if (show) alert.classList.remove('hidden');
+    else alert.classList.add('hidden');
+}
+
+function setEnergyNoDataState() {
+    clearCharts();
+
+    setEl('masterKpiActual', '0');
+    setEl('masterKpiTarget', '0');
+    setEl('masterKpiAveragePrice', '0');
+    setEl('masterKpiCostPerKwh', '0');
+    setEl('masterKpiPct', '0');
+    setEl('masterKpiPfMax', '-');
+    setEl('masterKpiPfMin', '-');
+    setEl('masterKpiPfAvg', '-');
+    setEl('masterKpiPfMaxTime', '-');
+    setEl('masterKpiPfMinTime', '-');
+    setEl('kpiEnergy', '0 kWh');
+
+    const progressBar = document.getElementById('progressBar');
+    const progressActual = document.getElementById('progressActual');
+    const progressTarget = document.getElementById('progressTarget');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.classList.remove('bg-red-600', 'animate-pulse');
+        progressBar.classList.add('bg-sanbornsRed');
+    }
+    if (progressActual) progressActual.textContent = '0';
+    if (progressTarget) progressTarget.textContent = '0';
+}
+
 function updateEnergyDashboard(energy) {
     if (!energy) {
-        clearCharts();
+        showNoDataAlert(true, 'No se pudieron obtener los datos del servidor. Por favor, inténtelo nuevamente.');
+        setEnergyNoDataState();
         return;
     }
+
+    const hasHourly = Array.isArray(energy.hourly) && energy.hourly.length > 0;
+    const kpiActual = energy.kpi && typeof energy.kpi.actual === 'number' ? energy.kpi.actual : 0;
+    const kpiTarget = energy.kpi && typeof energy.kpi.target === 'number' ? energy.kpi.target : 0;
+    const hasKpi = kpiActual > 0 || kpiTarget > 0;
+
+    if (!hasHourly && !hasKpi) {
+        showNoDataAlert(true, 'No se encontraron datos para esta fecha y sitio. Por favor, pruebe otra fecha o verifique los parámetros.');
+        setEnergyNoDataState();
+        return;
+    }
+
+    showNoDataAlert(false);
 
     // Actualizar Tarjetas Maestras
     if (energy.kpi) {
@@ -45,7 +99,18 @@ function updateEnergyDashboard(energy) {
 
         setEl('masterKpiActual', actual.toLocaleString('es-MX', maxFd));
         setEl('masterKpiTarget', target.toLocaleString('es-MX', maxFd));
-        
+        setEl('masterKpiAveragePrice', energy.kpi.average_price.toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }));
+
+        setEl('masterKpiCostPerKwh', energy.kpi.cost_per_kwh.toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }));
+
+
+
         const pctEl = document.getElementById('masterKpiPct');
         if (pctEl) {
             pctEl.textContent = pct;
@@ -61,10 +126,10 @@ function updateEnergyDashboard(energy) {
 
             setEl('masterKpiPfMax', energy.power_factor.max || '-');
             setEl('masterKpiPfMaxTime', `Hora: ${formatTime(energy.power_factor.max_time)}`);
-            
+
             setEl('masterKpiPfMin', energy.power_factor.min || '-');
             setEl('masterKpiPfMinTime', `Hora: ${formatTime(energy.power_factor.min_time)}`);
-            
+
             setEl('masterKpiPfAvg', energy.power_factor.avg || '-');
         }
 
@@ -72,7 +137,7 @@ function updateEnergyDashboard(energy) {
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
-            
+
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
             charts.kpiDay.data.datasets[0].data = isOver ? [actual] : [actual, restante];
             charts.kpiDay.data.datasets[0].backgroundColor = isOver ? ['#dc2626'] : ['#d91920', '#e2e8f0'];
@@ -85,14 +150,14 @@ function updateEnergyDashboard(energy) {
         const progressTarget = document.getElementById('progressTarget');
         const progressBar = document.getElementById('progressBar');
 
-        if(progressActual) progressActual.textContent = actual.toLocaleString('en-US', maxFd);
-        if(progressTarget) progressTarget.textContent = target.toLocaleString('en-US', maxFd);
-        
-        if(progressBar) {
+        if (progressActual) progressActual.textContent = actual.toLocaleString('en-US', maxFd);
+        if (progressTarget) progressTarget.textContent = target.toLocaleString('en-US', maxFd);
+
+        if (progressBar) {
             const displayPct = Math.min(strictPct, 100);
             progressBar.style.width = displayPct + '%';
             progressBar.textContent = strictPct > 0 ? strictPct.toFixed(1) + '%' : '0%';
-            
+
             if (strictPct > 100) {
                 progressBar.classList.remove('bg-sanbornsRed');
                 progressBar.classList.add('bg-red-600', 'animate-pulse');
@@ -103,13 +168,13 @@ function updateEnergyDashboard(energy) {
                 progressActual.classList.remove('text-red-600');
             }
         }
-        
+
         setEl('kpiEnergy', `${actual} kWh`);
     }
 
     // Gráfica de Líneas (Por Horas)
     if (energy.hourly && energy.hourly.length > 0 && charts.energy) {
-        charts.energy.data.labels = energy.hourly.map(h => h.hour.toString().substring(0,5));
+        charts.energy.data.labels = energy.hourly.map(h => h.hour.toString().substring(0, 5));
         charts.energy.data.datasets[0].data = energy.hourly.map(h => h.actual);
         if (charts.energy.data.datasets[1]) {
             charts.energy.data.datasets[1].data = energy.hourly.map(h => h.target);
@@ -121,7 +186,7 @@ function updateEnergyDashboard(energy) {
 }
 
 function clearCharts() {
-    if(charts.energy) {
+    if (charts.energy) {
         charts.energy.data.labels = [];
         charts.energy.data.datasets.forEach(ds => ds.data = []);
         charts.energy.update();
@@ -130,7 +195,7 @@ function clearCharts() {
 
 function setEl(id, text) {
     const el = document.getElementById(id);
-    if(el) el.textContent = text;
+    if (el) el.textContent = text;
 }
 
 // Inicialización
@@ -146,8 +211,8 @@ function initEnergyCharts() {
     if (ctx) {
         charts.energy = new Chart(ctx.getContext('2d'), {
             type: 'line',
-            data: { 
-                labels: [], 
+            data: {
+                labels: [],
                 datasets: [
                     {
                         label: 'Actual',
@@ -167,7 +232,7 @@ function initEnergyCharts() {
                         fill: false,
                         tension: 0.4
                     }
-                ] 
+                ]
             },
             options: {
                 responsive: true,
@@ -201,7 +266,7 @@ function initEnergyCharts() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { color: sanbornsGray } },
-                    tooltip: { callbacks: { label: function(c) { return c.formattedValue + ' kWh'; } } }
+                    tooltip: { callbacks: { label: function (c) { return c.formattedValue + ' kWh'; } } }
                 }
             }
         });
