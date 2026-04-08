@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dashboardMain = document.getElementById('dashboardMain');
     const userIdentityText = document.getElementById('userIdentityText');
     const userIdentitySource = document.getElementById('userIdentitySource');
+    const userIdentityDerivedUser = document.getElementById('userIdentityDerivedUser');
 
     function setUserIdentityLabel(text) {
         if (!userIdentityText) return;
@@ -18,12 +19,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         userIdentityText.textContent = value;
     }
 
+    function extractDerivedUserFromEmail(email) {
+        if (!email || !email.includes('@')) return '';
+        const localPart = email.split('@')[0];
+        // Remover puntos, guiones bajos, comas y tomar los primeros 20 caracteres
+        return localPart
+            .substring(0, 20)
+            .replace(/[._,]/g, '');
+    }
+
     function setUserIdentitySource(source) {
         if (!userIdentitySource) return;
 
         const rawValue = (typeof source === 'string' && source.trim()) ? source.trim() : '';
         if (rawValue.includes('@')) {
-            userIdentitySource.textContent = rawValue;
+            userIdentitySource.textContent = `Correo: ${rawValue}`;
             return;
         }
 
@@ -36,6 +46,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         userIdentitySource.textContent = labels[normalized] || `Source: ${normalized}`;
+    }
+
+    function setUserIdentityDerivedUser(email) {
+        if (!userIdentityDerivedUser) return;
+        
+        if (email) {
+            const derivedUser = extractDerivedUserFromEmail(email);
+            userIdentityDerivedUser.textContent = derivedUser || 'Usuario derivado no disponible';
+        } else {
+            userIdentityDerivedUser.textContent = '—';
+        }
     }
 
     async function loadUserContext() {
@@ -59,6 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             setUserIdentityLabel(data && data.label ? data.label : 'Usuario no identificado');
             const userEmail = data && data.email ? String(data.email).trim() : '';
             setUserIdentitySource(userEmail || (data && data.source ? data.source : 'anonymous'));
+            setUserIdentityDerivedUser(userEmail);
         } catch (err) {
             setUserIdentityLabel('Usuario no identificado');
             setUserIdentitySource('anonymous');
