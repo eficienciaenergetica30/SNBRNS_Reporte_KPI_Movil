@@ -1,8 +1,10 @@
 import json
 import os
+import base64
 
 from cfenv import AppEnv
 from dotenv import load_dotenv
+from flask import has_request_context, request
 from hdbcli import dbapi
 
 load_dotenv()
@@ -97,7 +99,81 @@ def _resolve_hana_credentials():
     return _vcap_services_credentials()
 
 
-def get_db_connection():
+def _decode_jwt_payload(token):
+    """Decodifica payload JWT sin validar firma. Retorna dict o None."""
+    try:
+        parts = token.split('.')
+        if len(parts) < 2:
+            return None
+
+        payload_b64 = parts[1]
+        padding = '=' * (-len(payload_b64) % 4)
+        payload_bytes = base64.urlsafe_b64decode(payload_b64 + padding)
+        payload = json.loads(payload_bytes.decode('utf-8'))
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
+def derive_db_user_from_email(email):
+    """
+    Deriva usuario HANA desde correo:
+    - tomar local-part (antes de @)
+    - maximo 20 caracteres
+    - remover puntos, guiones bajos y comas
+    - convertir a mayusculas
+    """
+    if not isinstance(email, str) or '@' not in email:
+        return ''
+
+    local_part = email.split('@')[0]
+    return local_part[:20].replace('.', '').replace('_', '').replace(',', '').upper()
+
+
+def _get_db_auth_mode():
+    mode = (os.getenv("DB_AUTH_MODE") or "technical").strip().lower()
+    return mode if mode in {"technical", "derived", "auto"} else "technical"
+
+
+def _extract_email_from_request():
+    if not has_request_context():
+        return ''
+
+    email = (request.headers.get('x-sap-user-email') or '').strip()
+    if email:
+        return email
+
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+        payload = _decode_jwt_payload(token)
+        if payload:
+            return str(payload.get('email') or payload.get('mail') or '').strip()
+
+    return ''
+
+
+def get_request_derived_user():
+    return derive_db_user_from_email(_extract_email_from_request())
+
+
+def _resolve_effective_user(base_user, requested_user=''):
+    mode = _get_db_auth_mode()
+
+    if mode == 'technical':
+        return base_user, mode
+
+    candidate = (requested_user or get_request_derived_user() or '').strip().upper()
+    if candidate:
+        return candidate, mode
+
+    if mode == 'auto':
+        return base_user, mode
+
+    return None, mode
+
+
+def get_db_connection(db_user=''):
     """
     Establece y retorna una conexion a SAP HANA.
 
@@ -111,25 +187,30 @@ def get_db_connection():
         print("Error conectando a HANA: no se encontraron credenciales en .env ni en Cloud Foundry")
         return None
 
+    effective_user, auth_mode = _resolve_effective_user(creds["user"], db_user)
+    if not effective_user:
+        print("Error conectando a HANA: modo 'derived' activo y no se pudo derivar usuario desde identidad")
+        return None
+
     try:
         port = int(creds["port"])
         conn = dbapi.connect(
             address=creds["host"],
             port=port,
-            user=creds["user"],
+            user=effective_user,
             password=creds["password"],
             encrypt=True, # type: ignore
             sslValidateCertificate=False, # type: ignore
         )
         return conn
     except Exception as e:
-        print(f"Error conectando a HANA ({creds['source']}): {e}")
+        print(f"Error conectando a HANA ({creds['source']}, mode={auth_mode}, user={effective_user}): {e}")
         return None
 
 
-def test_db_connection():
+def test_db_connection(db_user=''):
     """Prueba la conexion y retorna (bool, mensaje)."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_user=db_user)
     if conn is None:
         return False, "No se pudo establecer conexion."
 
