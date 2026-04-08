@@ -1,13 +1,32 @@
 applications:
-  - name: snbrns-reporte-kpis-dev
+  # 1. TU BACKEND EN PYTHON (Le agregamos "-backend" al nombre)
+  - name: snbrns-reporte-kpis-dev-backend
     path: .
     memory: 256M
-    instances: 1
     buildpacks:
-      - python_buildpack
+      - https://github.com/cloudfoundry/python-buildpack.git#v1.8.4
+    # --- DEJA AQUÍ TUS VARIABLES DE ENTORNO (ENV) SI TENÍAS ---
+    services:
+      - snbrns-reporte-kpis-dev-xsuaa
+      # - nombre-de-tu-hdi-container-1
+      # - nombre-de-tu-hdi-container-2
+
+  # 2. EL NUEVO APPROUTER (El túnel que inyecta la identidad)
+  - name: snbrns-reporte-kpis-dev-approuter
+    path: approuter
+    memory: 128M
+    buildpacks:
+      - nodejs_buildpack
     env:
-      OPTIMIZE_PACKAGING: true
-      XSAPPNAME: snbrns-reporte-kpis-dev
-      PYTHONUNBUFFERED: "1"
+      SEND_XFRAMEOPTIONS: "false"
+      httpHeaders: "[{\"Content-Security-Policy\":\"frame-ancestors *;\"}]"
+      destinations: >
+        [
+          {
+            "name": "backend",
+            "url": "https://snbrns-reporte-kpis-dev-backend.cfapps.us10.hana.ondemand.com",
+            "forwardAuthToken": true
+          }
+        ]
     services:
       - snbrns-reporte-kpis-dev-xsuaa
