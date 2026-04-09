@@ -42,89 +42,88 @@ class TemperaturaModel:
             resolved_site_name = site_row[0] if site_row else (normalized_sitename or "Sitio Desconocido")
 
             # 1. KPIs: Min, Max, Actual y Promedio
-                        if normalized_sitename:
-                                kpi_query = f'''
-                                        SELECT
-                                                ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
-                                                MIN_Q.TIME AS TIME_MIN_DEGREES,
-                                                ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
-                                                MAX_Q.TIME AS TIME_MAX_DEGREES,
-                                                ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
-                                                CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
-                                                ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
-                                                ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
-                                        FROM
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
-                                        CROSS JOIN
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
-                                        CROSS JOIN
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
-                                        CROSS JOIN
-                                                (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
-                                                     AND "DEGREES" IS NOT NULL) AS TOTAL_Q
-                                '''
-                                params = (
-                                        costcenter, date, block, normalized_sitename,
-                                        costcenter, date, block, normalized_sitename,
-                                        costcenter, date, block, normalized_sitename,
-                                        costcenter, date, block, normalized_sitename,
-                                )
-                        else:
-                                kpi_query = f'''
-                                        SELECT
-                                                ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
-                                                MIN_Q.TIME AS TIME_MIN_DEGREES,
-                                                ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
-                                                MAX_Q.TIME AS TIME_MAX_DEGREES,
-                                                ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
-                                                CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
-                                                ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
-                                                ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
-                                        FROM
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
-                                        CROSS JOIN
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
-                                        CROSS JOIN
-                                                (SELECT TIME, DEGREES
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                                                     AND "DEGREES" IS NOT NULL
-                                                 ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
-                                        CROSS JOIN
-                                                (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
-                                                 FROM "{schema}"."{view}"
-                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                                                     AND "DEGREES" IS NOT NULL) AS TOTAL_Q
-                                '''
-
-                                params = (
-                                        costcenter, date, block,
-                                        costcenter, date, block,
-                                        costcenter, date, block,
-                                        costcenter, date, block,
-                                )
+            if normalized_sitename:
+                kpi_query = f'''
+                    SELECT
+                        ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
+                        MIN_Q.TIME AS TIME_MIN_DEGREES,
+                        ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
+                        MAX_Q.TIME AS TIME_MAX_DEGREES,
+                        ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
+                        CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
+                        ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
+                        ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
+                    FROM
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
+                    CROSS JOIN
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
+                    CROSS JOIN
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
+                    CROSS JOIN
+                        (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                           AND "DEGREES" IS NOT NULL) AS TOTAL_Q
+                '''
+                params = (
+                    costcenter, date, block, normalized_sitename,
+                    costcenter, date, block, normalized_sitename,
+                    costcenter, date, block, normalized_sitename,
+                    costcenter, date, block, normalized_sitename,
+                )
+            else:
+                kpi_query = f'''
+                    SELECT
+                        ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
+                        MIN_Q.TIME AS TIME_MIN_DEGREES,
+                        ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
+                        MAX_Q.TIME AS TIME_MAX_DEGREES,
+                        ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
+                        CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
+                        ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
+                        ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
+                    FROM
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
+                    CROSS JOIN
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
+                    CROSS JOIN
+                        (SELECT TIME, DEGREES
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                           AND "DEGREES" IS NOT NULL
+                         ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
+                    CROSS JOIN
+                        (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
+                         FROM "{schema}"."{view}"
+                         WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                           AND "DEGREES" IS NOT NULL) AS TOTAL_Q
+                '''
+                params = (
+                    costcenter, date, block,
+                    costcenter, date, block,
+                    costcenter, date, block,
+                    costcenter, date, block,
+                )
             cursor.execute(kpi_query, params)
             row = cursor.fetchone()
 
