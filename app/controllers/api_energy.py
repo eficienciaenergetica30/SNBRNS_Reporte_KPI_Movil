@@ -12,7 +12,10 @@ def energy_today():
         return jsonify({"error": "Falta parametro costcenter"}), 400
         
     data = get_energy_data(costcenter, date)
-    return jsonify(data) if data else (jsonify({"error": "Error interno"}), 500)
+    if data is None:
+        return jsonify({"error": "Error interno"}), 500
+
+    return jsonify(data)
 
 @api_energy_bp.route('/sites/energy')
 def get_energy_sites():

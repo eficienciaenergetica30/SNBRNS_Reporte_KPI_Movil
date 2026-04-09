@@ -2,6 +2,7 @@
 
 // Variables Globales base
 let allSites = [];
+window.__dbCanProceed = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const siteInput = document.getElementById('siteSearchInput');
@@ -11,6 +12,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dashboardMain = document.getElementById('dashboardMain');
     const userIdentityText = document.getElementById('userIdentityText');
     const userIdentitySource = document.getElementById('userIdentitySource');
+    const userIdentityDerivedUser = document.getElementById('userIdentityDerivedUser');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingOverlayText = document.getElementById('loadingOverlayText');
+
+    function showLoadingOverlay(message = 'Cargando datos del sitio...') {
+        if (loadingOverlayText && message) {
+            loadingOverlayText.textContent = message;
+        }
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+    }
+
+    function hideLoadingOverlay() {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    }
 
     function setUserIdentityLabel(text) {
         if (!userIdentityText) return;
@@ -21,7 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setUserIdentitySource(source) {
         if (!userIdentitySource) return;
 
-        const normalized = (typeof source === 'string' && source.trim()) ? source.trim().toLowerCase() : 'anonymous';
+        const rawValue = (typeof source === 'string' && source.trim()) ? source.trim() : '';
+        if (rawValue.includes('@')) {
+            userIdentitySource.textContent = `Correo: ${rawValue}`;
+            return;
+        }
+
+        const normalized = rawValue ? rawValue.toLowerCase() : 'anonymous';
         const labels = {
             launchpad: 'Source: launchpad',
             token: 'Source: token',
@@ -32,29 +53,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         userIdentitySource.textContent = labels[normalized] || `Source: ${normalized}`;
     }
 
-    async function loadUserContext() {
+    function setUserIdentityDerivedUser(dbUser = '') {
+        if (!userIdentityDerivedUser) return;
+
+        const resolvedDbUser = (typeof dbUser === 'string' && dbUser.trim())
+            ? dbUser.trim()
+            : '';
+
+        if (resolvedDbUser) {
+            userIdentityDerivedUser.textContent = resolvedDbUser;
+        } else {
+            userIdentityDerivedUser.textContent = '—';
+        }
+    }
+
+    async function loadBootstrapContext() {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         try {
-            const response = await fetch(`/api/user-context?_=${Date.now()}`, {
+            const response = await fetch(`/api/bootstrap-context?_=${Date.now()}`, {
                 method: 'GET',
                 cache: 'no-store',
                 signal: controller.signal,
             });
 
             if (!response.ok) {
-                setUserIdentityLabel('Usuario no identificado');
-                setUserIdentitySource('anonymous');
-                return;
+                return null;
             }
 
             const data = await response.json();
-            setUserIdentityLabel(data && data.label ? data.label : 'Usuario no identificado');
-            setUserIdentitySource(data && data.source ? data.source : 'anonymous');
+            const ctx = data && data.userContext ? data.userContext : {};
+
+            setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
+            const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
+            const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
+            setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
+            setUserIdentityDerivedUser(dbUser);
+            return data;
         } catch (err) {
-            setUserIdentityLabel('Usuario no identificado');
-            setUserIdentitySource('anonymous');
+            return null;
         } finally {
             clearTimeout(timeoutId);
         }
@@ -78,7 +116,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cargar identidad de usuario con fallback seguro
     setUserIdentityLabel('Usuario no identificado');
     setUserIdentitySource('anonymous');
-    await loadUserContext();
+    setUserIdentityDerivedUser('');
+
+    showLoadingOverlay('Validando acceso y conexión a base de datos...');
+    const bootstrap = await loadBootstrapContext();
+    const canProceed = !!(bootstrap && bootstrap.canProceed);
+    window.__dbCanProceed = canProceed;
+    const businessRole = ((bootstrap && bootstrap.businessRole) || 'SITIO').toString().trim().toUpperCase();
+    document.body.classList.add('role-' + businessRole.toLowerCase());
+    window.__businessRole = businessRole;
+
+    if (!canProceed) {
+        const msg = (bootstrap && bootstrap.message)
+            ? bootstrap.message
+            : 'No se pudo validar acceso a base de datos.';
+        showLoadingOverlay(`Acceso bloqueado: ${msg}`);
+        if (dropdown) {
+            dropdown.innerHTML = '<li class="p-3 text-red-500 text-xs">Acceso no disponible. Contacta a soporte.</li>';
+        }
+        return;
+    }
+
+    hideLoadingOverlay();
 
     // Función auxiliar: obtener el módulo actual desde la URL
     function getCurrentModule() {
@@ -90,28 +149,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         return 'energy'; // default
     }
 
+    const currentModule = getCurrentModule();
+    if (typeof window.applyRoleVisibility === 'function') {
+        window.applyRoleVisibility(businessRole, currentModule);
+    }
+
     // Función auxiliar: cargar sitios del módulo actual con datos frescos
     // Estrategia: SIEMPRE consultar backend al entrar; cache local sólo como respaldo.
     async function loadSitesForModule() {
+        if (!window.__dbCanProceed) return;
+
         const module = getCurrentModule();
         const siteEndpoint = `/api/sites/${module}`;
         const fallbackEndpoint = `/api/sites`;
         const cacheKey = `sites_${module}`;
         let hasRenderedFromNetwork = false;
-        
-        // Mostrar overlay de carga
-        function showLoadingOverlay() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.classList.remove('hidden');
-        }
-        
-        function hideLoadingOverlay() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.classList.add('hidden');
-        }
 
         // Siempre pedir datos frescos al backend.
-        showLoadingOverlay();
+        showLoadingOverlay('Cargando datos del sitio...');
 
         try {
             const response = await fetch(`${siteEndpoint}?_=${Date.now()}`, { cache: 'no-store' });
@@ -309,6 +364,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (dateInput) dateInput.addEventListener('change', triggerDashboardRefresh);
 
     function triggerDashboardRefresh() {
+        if (!window.__dbCanProceed) return;
+
         const costCenter = hiddenCostCenter ? hiddenCostCenter.value : null;
         const date = dateInput ? dateInput.value : null;
 
@@ -337,6 +394,10 @@ window.showLoading = function (show) {
 }
 
 window.fetchData = async function (url, costCenter, date) {
+    if (!window.__dbCanProceed) {
+        return null;
+    }
+
     try {
         const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}`);
         if (!res.ok) return null;

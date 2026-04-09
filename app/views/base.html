@@ -34,6 +34,8 @@
         .dark #datePicker::-webkit-calendar-picker-indicator {
             filter: brightness(0) invert(1);
         }
+        /* RBAC visual solo frontend: aplicado dinamicamente desde rbac-config.js */
+        .rbac-hidden { display: none !important; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -160,6 +162,8 @@
                                 <span id="userIdentityText">Usuario no identificado</span>
                                 <span id="userIdentitySource"
                                     class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Source: anonymous</span>
+                                <!-- <span id="userIdentityDerivedUser"
+                                    class="text-xs text-slate-600 dark:text-slate-300 font-mono">—</span> -->
                             </div>
                         </div>
                     </div>
@@ -172,7 +176,7 @@
                 class="hidden fixed inset-0 bg-slate-50/80 dark:bg-darkBg/80 z-50 flex items-center justify-center backdrop-blur-sm">
                 <div class="flex flex-col items-center">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-sanbornsRed"></div>
-                    <p class="mt-4 font-semibold text-slate-600 dark:text-slate-300">Cargando datos del sitio...</p>
+                    <p id="loadingOverlayText" class="mt-4 font-semibold text-slate-600 dark:text-slate-300">Cargando datos del sitio...</p>
                 </div>
             </div>
 
@@ -192,6 +196,9 @@
             </main>
         </div> <!-- End Main Content -->
     </div> <!-- End Flex wrapper -->
+
+    <!-- RBAC visual config -->
+    <script src="{{ url_for('static', filename='js/rbac-config.js') }}"></script>
 
     <!-- Core App JS (Sidebar, Search, Global Utils) -->
     <script src="{{ url_for('static', filename='js/core.js') }}"></script>
