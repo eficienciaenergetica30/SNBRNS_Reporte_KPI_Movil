@@ -166,16 +166,25 @@ def get_db_connection(db_user='', db_password=''):
     1) Variables locales en .env (HANA_HOST/HANA_PORT/HANA_UID/HANA_PWD)
     2) Credenciales de Cloud Foundry via cfenv
     3) Credenciales directas desde VCAP_SERVICES
+    
+    Si db_user y db_password se proporcionan, los usa directamente (para conexión de usuario final).
+    Si no, usa credenciales técnicas (HANA_UID + HANA_PWD).
     """
     creds = _resolve_hana_credentials()
     if not creds:
         print("Error conectando a HANA: no se encontraron credenciales en .env ni en Cloud Foundry")
         return None
 
-    effective_user, auth_mode = _resolve_effective_user(creds["user"], db_user)
-    if not effective_user:
-        print("Error conectando a HANA: modo 'derived' activo y no se pudo derivar usuario desde identidad")
-        return None
+    # Si viene db_user + db_password, usar esos directamente (conexión de usuario final)
+    if db_user and db_password:
+        effective_user = db_user.strip().upper()
+        effective_password = db_password.strip()
+        auth_mode = 'final-user'
+    else:
+        # Si no, usar credenciales técnicas
+        effective_user = creds["user"]
+        effective_password = creds["password"]
+        auth_mode = 'technical'
 
     try:
         port = int(creds["port"])
