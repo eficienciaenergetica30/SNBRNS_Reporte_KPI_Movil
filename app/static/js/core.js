@@ -132,7 +132,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bootstrap = await loadBootstrapContext();
     const canProceed = !!(bootstrap && bootstrap.canProceed);
     window.__dbCanProceed = canProceed;
-    document.body.classList.add('role-' + ((bootstrap && bootstrap.businessRole) || 'tecnico').toLowerCase());
+    const businessRole = ((bootstrap && bootstrap.businessRole) || 'TECNICO').toString().trim().toUpperCase();
+    document.body.classList.add('role-' + businessRole.toLowerCase());
+    window.__businessRole = businessRole;
 
     if (!canProceed) {
         const msg = (bootstrap && bootstrap.message)
@@ -155,6 +157,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (path.includes('/gas')) return 'gas';
         if (path.includes('/temperatura')) return 'temperatura';
         return 'energy'; // default
+    }
+
+    const currentModule = getCurrentModule();
+    if (typeof window.applyRoleVisibility === 'function') {
+        window.applyRoleVisibility(businessRole, currentModule);
     }
 
     // Función auxiliar: cargar sitios del módulo actual con datos frescos
