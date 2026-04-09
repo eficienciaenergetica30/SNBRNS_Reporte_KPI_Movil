@@ -45,7 +45,7 @@
         </div>
 
         <!-- Temperatura Máxima -->
-        <div class="role-admin-hide min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div id="tempCardMax" class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Máx</p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
@@ -57,7 +57,7 @@
         </div>
 
         <!-- Temperatura Mínima -->
-        <div class="role-admin-hide min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div id="tempCardMin" class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Mín</p>
                 <p class="text-xs text-slate-500 mt-1">Hoy</p>
@@ -69,7 +69,7 @@
         </div>
 
         <!-- Temperatura Promedio -->
-        <div class="role-admin-hide min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div id="tempCardAvg" class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Temperatura Promedio</p>
                 <p class="text-xs text-slate-500 mt-1">°C</p>
@@ -81,7 +81,7 @@
         </div>
 
         <!-- MinMax (Rango) -->
-        <div class="role-admin-hide min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
+        <div id="tempCardRange" class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100">MinMax</p>
                 <p class="text-xs text-slate-500 mt-1">Rango</p>
@@ -118,7 +118,7 @@
 </div>
 
 <!-- Gráfica por hora -->
-<div class="role-admin-hide bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+<div id="tempSectionHourlyChart" class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
     <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-blue-500 flex items-center gap-2">🌡️ Temperatura por Hora</h3>
         <div class="text-right">
