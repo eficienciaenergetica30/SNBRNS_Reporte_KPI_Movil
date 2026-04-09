@@ -158,7 +158,7 @@ def _resolve_effective_user(base_user, requested_user=''):
     return None, mode
 
 
-def get_db_connection(db_user='', db_password=''):
+def get_db_connection(db_user='', db_password='', force_technical=False):
     """
     Establece y retorna una conexion a SAP HANA.
 
@@ -167,29 +167,58 @@ def get_db_connection(db_user='', db_password=''):
     2) Credenciales de Cloud Foundry via cfenv
     3) Credenciales directas desde VCAP_SERVICES
     
-    Si db_user y db_password se proporcionan, los usa directamente (para conexión de usuario final).
-    Si no, usa credenciales técnicas (HANA_UID + HANA_PWD).
+    Flujo:
+    - force_technical=True: siempre usa usuario técnico (maestro).
+    - db_user + db_password: usa credenciales explícitas de usuario final.
+    - caso por defecto: resuelve correo del request, busca USER en tabla de roles
+      y conecta con USER + HANA_CLIENT_PWD.
     """
     creds = _resolve_hana_credentials()
     if not creds:
         print("Error conectando a HANA: no se encontraron credenciales en .env ni en Cloud Foundry")
         return None
 
-    # Si viene db_user + db_password, usar esos directamente (conexión de usuario final)
-    if db_user and db_password:
-        effective_user = db_user.strip().upper()
-        effective_password = db_password.strip()
-        auth_mode = 'final-user'
-    else:
-        # Si no, usar credenciales técnicas
+    if force_technical:
         effective_user = creds["user"]
         effective_password = creds["password"]
-        auth_mode = 'technical'
+        auth_mode = 'technical-forced'
+    elif db_user and db_password:
+        # Si viene db_user + db_password, usar esos directamente (conexión de usuario final)
+        effective_user = db_user.strip().upper()
+        effective_password = db_password.strip()
+        auth_mode = 'final-user-explicit'
+    else:
+        # Conexión por defecto: resolver usuario por correo del request y tabla de roles.
+        email = _extract_email_from_request().strip().lower()
+        client_password = (os.getenv('HANA_CLIENT_PWD') or '').strip()
+        if not email:
+            print("[WARN get_db_connection] No se pudo resolver correo desde request para conexion de usuario final")
+            return None
+        if not client_password:
+            print("[WARN get_db_connection] HANA_CLIENT_PWD no configurado para conexion de usuario final")
+            return None
+
+        user_record = query_user_roles_table(email)
+        if not user_record:
+            print(f"[WARN get_db_connection] Correo no existe en tabla de roles: {email}")
+            return None
+
+        if int(user_record.get('deletionRequest') or 0) == 1:
+            print(f"[WARN get_db_connection] Usuario marcado como desactivado en tabla de roles: {email}")
+            return None
+
+        table_user = str(user_record.get('user') or '').strip().upper()
+        if not table_user:
+            print(f"[WARN get_db_connection] USER vacio en tabla de roles para correo: {email}")
+            return None
+
+        effective_user = table_user
+        effective_password = client_password
+        auth_mode = 'final-user-from-roles'
 
     try:
         port = int(creds["port"])
         encrypt, ssl_validate = _get_connection_security_settings()
-        effective_password = db_password or creds["password"]
         print(f"[DEBUG get_db_connection] Intentando conexión con: host={creds['host']}, port={port}, user={effective_user}, encrypt={encrypt}, ssl_validate={ssl_validate}")
         conn = dbapi.connect(
             address=creds["host"],
@@ -239,7 +268,7 @@ def query_user_roles_table(email: str):
     if not schema or not normalized_email:
         return None
 
-    conn = get_db_connection(db_user='')
+    conn = get_db_connection(force_technical=True)
     if conn is None:
         print("query_user_roles_table: sin conexion tecnica")
         return None
