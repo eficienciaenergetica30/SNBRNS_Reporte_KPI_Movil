@@ -6,7 +6,7 @@ from flask import current_app
 class TemperaturaModel:
 
     @staticmethod
-    def get_temperatura_kpis(costcenter, date, block=1):
+    def get_temperatura_kpis(costcenter, date, block=1, sitename=''):
         """
         Obtiene los KPIs de temperatura para un centro de costos, fecha y bloque específicos.
         Block: 1=Tienda, 2=Bar, 3=Restaurante
@@ -20,51 +20,111 @@ class TemperaturaModel:
 
             schema = os.getenv("HANA_SCHEMA")
             view = os.getenv("HANA_VIEW_TEMPERATURE")
+            normalized_sitename = (sitename or '').strip()
 
             cursor = hana.cursor()
 
-            # 1. KPIs: Min, Max, Actual y Promedio
-            kpi_query = f'''
-                SELECT
-                    ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
-                    MIN_Q.TIME AS TIME_MIN_DEGREES,
-                    ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
-                    MAX_Q.TIME AS TIME_MAX_DEGREES,
-                    ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
-                    CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
-                    ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
-                    ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
-                FROM
-                    (SELECT TIME, DEGREES
-                     FROM "{schema}"."{view}"
-                     WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                       AND "DEGREES" IS NOT NULL
-                     ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
-                CROSS JOIN
-                    (SELECT TIME, DEGREES
-                     FROM "{schema}"."{view}"
-                     WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                       AND "DEGREES" IS NOT NULL
-                     ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
-                CROSS JOIN
-                    (SELECT TIME, DEGREES
-                     FROM "{schema}"."{view}"
-                     WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                       AND "DEGREES" IS NOT NULL
-                     ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
-                CROSS JOIN
-                    (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
-                     FROM "{schema}"."{view}"
-                     WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
-                       AND "DEGREES" IS NOT NULL) AS TOTAL_Q
-            '''
+            if normalized_sitename:
+                site_query = f'''
+                    SELECT TOP 1 "NAME"
+                    FROM "{schema}"."{view}"
+                    WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                '''
+                cursor.execute(site_query, (costcenter, date, block, normalized_sitename))
+            else:
+                site_query = f'''
+                    SELECT TOP 1 "NAME"
+                    FROM "{schema}"."{view}"
+                    WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                '''
+                cursor.execute(site_query, (costcenter, date, block))
+            site_row = cursor.fetchone()
+            resolved_site_name = site_row[0] if site_row else (normalized_sitename or "Sitio Desconocido")
 
-            params = (
-                costcenter, date, block,
-                costcenter, date, block,
-                costcenter, date, block,
-                costcenter, date, block,
-            )
+            # 1. KPIs: Min, Max, Actual y Promedio
+                        if normalized_sitename:
+                                kpi_query = f'''
+                                        SELECT
+                                                ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
+                                                MIN_Q.TIME AS TIME_MIN_DEGREES,
+                                                ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
+                                                MAX_Q.TIME AS TIME_MAX_DEGREES,
+                                                ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
+                                                CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
+                                                ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
+                                                ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
+                                        FROM
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
+                                        CROSS JOIN
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
+                                        CROSS JOIN
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
+                                        CROSS JOIN
+                                                (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ? AND "NAME" = ?
+                                                     AND "DEGREES" IS NOT NULL) AS TOTAL_Q
+                                '''
+                                params = (
+                                        costcenter, date, block, normalized_sitename,
+                                        costcenter, date, block, normalized_sitename,
+                                        costcenter, date, block, normalized_sitename,
+                                        costcenter, date, block, normalized_sitename,
+                                )
+                        else:
+                                kpi_query = f'''
+                                        SELECT
+                                                ROUND(MIN_Q.DEGREES, 2) AS MIN_DEGREES,
+                                                MIN_Q.TIME AS TIME_MIN_DEGREES,
+                                                ROUND(MAX_Q.DEGREES, 2) AS MAX_DEGREES,
+                                                MAX_Q.TIME AS TIME_MAX_DEGREES,
+                                                ROUND(CURRENT_Q.DEGREES, 2) AS CURRENT_DEGREES,
+                                                CURRENT_Q.TIME AS TIME_CURRENT_DEGREES,
+                                                ROUND(TOTAL_Q.TOTAL_DEGREES / TOTAL_Q.CNT, 2) AS AVG_DEGREES,
+                                                ROUND(MIN_Q.DEGREES / MAX_Q.DEGREES, 2) AS MINMAX
+                                        FROM
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY "DEGREES" ASC LIMIT 1) AS MIN_Q
+                                        CROSS JOIN
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY "DEGREES" DESC LIMIT 1) AS MAX_Q
+                                        CROSS JOIN
+                                                (SELECT TIME, DEGREES
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                                                     AND "DEGREES" IS NOT NULL
+                                                 ORDER BY TIME DESC LIMIT 1) AS CURRENT_Q
+                                        CROSS JOIN
+                                                (SELECT SUM(DEGREES) AS TOTAL_DEGREES, COUNT(*) AS CNT
+                                                 FROM "{schema}"."{view}"
+                                                 WHERE "COSTCENTER" = ? AND "DATE_D" = ? AND "BLOCK" = ?
+                                                     AND "DEGREES" IS NOT NULL) AS TOTAL_Q
+                                '''
+
+                                params = (
+                                        costcenter, date, block,
+                                        costcenter, date, block,
+                                        costcenter, date, block,
+                                        costcenter, date, block,
+                                )
             cursor.execute(kpi_query, params)
             row = cursor.fetchone()
 
@@ -84,19 +144,35 @@ class TemperaturaModel:
             }
 
             # 2. Datos horarios para la gráfica
-            hourly_query = f'''
-                SELECT
-                    HOUR(T1."HOUR") AS "HOUR",
-                    IFNULL(AVG(T1."DEGREES"), 0) AS "ACTUAL"
-                FROM "{schema}"."{view}" T1
-                WHERE T1."COSTCENTER" = ?
-                  AND T1."DATE_D" = ?
-                  AND T1."BLOCK" = ?
-                  AND T1."DEGREES" IS NOT NULL
-                GROUP BY HOUR(T1."HOUR")
-                ORDER BY "HOUR" ASC
-            '''
-            cursor.execute(hourly_query, (costcenter, date, block))
+            if normalized_sitename:
+                hourly_query = f'''
+                    SELECT
+                        HOUR(T1."HOUR") AS "HOUR",
+                        IFNULL(AVG(T1."DEGREES"), 0) AS "ACTUAL"
+                    FROM "{schema}"."{view}" T1
+                    WHERE T1."COSTCENTER" = ?
+                      AND T1."DATE_D" = ?
+                      AND T1."BLOCK" = ?
+                      AND T1."NAME" = ?
+                      AND T1."DEGREES" IS NOT NULL
+                    GROUP BY HOUR(T1."HOUR")
+                    ORDER BY "HOUR" ASC
+                '''
+                cursor.execute(hourly_query, (costcenter, date, block, normalized_sitename))
+            else:
+                hourly_query = f'''
+                    SELECT
+                        HOUR(T1."HOUR") AS "HOUR",
+                        IFNULL(AVG(T1."DEGREES"), 0) AS "ACTUAL"
+                    FROM "{schema}"."{view}" T1
+                    WHERE T1."COSTCENTER" = ?
+                      AND T1."DATE_D" = ?
+                      AND T1."BLOCK" = ?
+                      AND T1."DEGREES" IS NOT NULL
+                    GROUP BY HOUR(T1."HOUR")
+                    ORDER BY "HOUR" ASC
+                '''
+                cursor.execute(hourly_query, (costcenter, date, block))
             hourly_raw = cursor.fetchall()
 
             hourly_data = []
@@ -107,7 +183,7 @@ class TemperaturaModel:
                         "actual": float(h_row[1]) if h_row[1] is not None else 0
                     })
 
-            return {"kpi": kpi_data, "hourly": hourly_data}
+            return {"site_name": resolved_site_name, "kpi": kpi_data, "hourly": hourly_data}
 
         except Exception as e:
             current_app.logger.error(f"Error en TemperaturaModel.get_temperatura_kpis: {e}")

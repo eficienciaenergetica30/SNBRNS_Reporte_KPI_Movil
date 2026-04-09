@@ -7,7 +7,7 @@ class GasModel:
         pass
 
     @staticmethod
-    def get_gas_kpis(costcenter, date):
+    def get_gas_kpis(costcenter, date, sitename=''):
         """
         Obtiene los KPIs de gas para un centro de costos y fecha específicos.
         """
@@ -20,6 +20,7 @@ class GasModel:
             
             schema = os.getenv("HANA_SCHEMA")
             view = os.getenv("HANA_VIEW_GAS_HOUR")
+            normalized_sitename = (sitename or '').strip()
             
             cursor = hana.cursor()
             
@@ -37,15 +38,34 @@ class GasModel:
             cost_row = cursor.fetchone()
             unit_price = float(cost_row[0]) if cost_row else 0
 
+            if normalized_sitename:
+                site_query = f'SELECT TOP 1 "SITE_NAME" FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "SITE_NAME" = ?'
+                cursor.execute(site_query, (costcenter, normalized_sitename))
+            else:
+                site_query = f'SELECT TOP 1 "SITE_NAME" FROM "{schema}"."{view}" WHERE "COSTCENTER" = ?'
+                cursor.execute(site_query, (costcenter,))
+            site_row = cursor.fetchone()
+            resolved_site_name = site_row[0] if site_row else (normalized_sitename or "Sitio Desconocido")
+
             # 2. KPIs TOTALES DE HOY
-            kpi_query = f'''
-                SELECT 
-                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
-                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
-                FROM "{schema}"."{view}"
-                WHERE "DATE" = ? AND "COSTCENTER" = ?
-            '''
-            cursor.execute(kpi_query, (date, costcenter))
+            if normalized_sitename:
+                kpi_query = f'''
+                    SELECT 
+                        IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                        IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                    FROM "{schema}"."{view}"
+                    WHERE "DATE" = ? AND "COSTCENTER" = ? AND "SITE_NAME" = ?
+                '''
+                cursor.execute(kpi_query, (date, costcenter, normalized_sitename))
+            else:
+                kpi_query = f'''
+                    SELECT 
+                        IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                        IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                    FROM "{schema}"."{view}"
+                    WHERE "DATE" = ? AND "COSTCENTER" = ?
+                '''
+                cursor.execute(kpi_query, (date, costcenter))
             kpi_row = cursor.fetchone()
             
             actual_consumption = float(kpi_row[0]) if kpi_row else 0
@@ -58,17 +78,30 @@ class GasModel:
             }
 
             # Consulta para datos por hora
-            hourly_query = f'''
-                SELECT 
-                    "HOUR",
-                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
-                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
-                FROM "{schema}"."{view}"
-                WHERE "DATE" = ? AND "COSTCENTER" = ?
-                GROUP BY "HOUR"
-                ORDER BY "HOUR" ASC
-            '''
-            cursor.execute(hourly_query, (date, costcenter))
+            if normalized_sitename:
+                hourly_query = f'''
+                    SELECT 
+                        "HOUR",
+                        IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                        IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                    FROM "{schema}"."{view}"
+                    WHERE "DATE" = ? AND "COSTCENTER" = ? AND "SITE_NAME" = ?
+                    GROUP BY "HOUR"
+                    ORDER BY "HOUR" ASC
+                '''
+                cursor.execute(hourly_query, (date, costcenter, normalized_sitename))
+            else:
+                hourly_query = f'''
+                    SELECT 
+                        "HOUR",
+                        IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                        IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                    FROM "{schema}"."{view}"
+                    WHERE "DATE" = ? AND "COSTCENTER" = ?
+                    GROUP BY "HOUR"
+                    ORDER BY "HOUR" ASC
+                '''
+                cursor.execute(hourly_query, (date, costcenter))
             hourly_data_raw = cursor.fetchall()
 
             hourly_data = []
@@ -82,7 +115,7 @@ class GasModel:
                         elif isinstance(value, (int, float)) or hasattr(value, 'real'):
                              row[key] = float(value)
 
-            return {"kpi": kpi_data, "hourly": hourly_data}
+            return {"site_name": resolved_site_name, "kpi": kpi_data, "hourly": hourly_data}
 
         except Exception as e:
             current_app.logger.error(f"Error en GasModel.get_gas_kpis: {e}")

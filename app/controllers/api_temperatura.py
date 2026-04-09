@@ -8,12 +8,13 @@ def get_temperatura_data():
     costcenter = request.args.get('costcenter')
     date = request.args.get('date')
     block = request.args.get('block', 1, type=int)
+    sitename = request.args.get('sitename', '').strip()
 
     if not costcenter or not date:
         return jsonify({"error": "Parámetros 'costcenter' y 'date' son requeridos."}), 400
 
     try:
-        data = TemperaturaModel.get_temperatura_kpis(costcenter, date, block)
+        data = TemperaturaModel.get_temperatura_kpis(costcenter, date, block, sitename)
         if data is not None:
             return jsonify(data)
         else:

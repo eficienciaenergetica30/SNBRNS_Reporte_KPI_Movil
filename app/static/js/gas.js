@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DashboardRefreshRequired', async (e) => {
-    const { costCenter, date, inputName } = e.detail;
+    const { costCenter, date, inputName, siteName } = e.detail;
     window.showLoading(true);
     try {
-        const gasData = await window.fetchData('/api/gas', costCenter, date);
+        const gasData = await window.fetchData('/api/gas', costCenter, date, siteName);
 
         const validSiteName = (gasData && gasData.site_name) 
                                 ? gasData.site_name 

@@ -44,10 +44,11 @@ document.addEventListener('DashboardRefreshRequired', async (e) => {
     await fetchAndRender(e.detail);
 });
 
-async function fetchAndRender({ costCenter, date, inputName }) {
+async function fetchAndRender({ costCenter, date, inputName, siteName }) {
     window.showLoading(true);
     try {
-        const url = `/api/temperatura?block=${currentBlock}&costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}`;
+        const siteNameParam = siteName ? `&sitename=${encodeURIComponent(siteName)}` : '';
+        const url = `/api/temperatura?block=${currentBlock}&costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}${siteNameParam}`;
         const res = await fetch(url);
         const data = res.ok ? await res.json() : null;
 
