@@ -160,6 +160,7 @@ def bootstrap_context():
         user_ctx = _resolve_user_context()
         db_auth_mode = 'table-email'
         email = (user_ctx.get('email') or '').strip().lower()
+        print(f"[DEBUG bootstrap_context] Email recovered from user context: {email}")
 
         if not email:
             return jsonify({
@@ -171,6 +172,7 @@ def bootstrap_context():
             }), 200
 
         user_record = query_user_roles_table(email)
+        print(f"[DEBUG bootstrap_context] query_user_roles_table result: {user_record}")
         if not user_record:
             return jsonify({
                 "userContext": user_ctx,
@@ -194,6 +196,7 @@ def bootstrap_context():
             }), 200
 
         hana_db_user = str(user_record.get('user') or '').strip().upper()
+        print(f"[DEBUG bootstrap_context] HANA DB user from table: {hana_db_user}")
         if not hana_db_user:
             return jsonify({
                 "userContext": user_ctx,
@@ -204,6 +207,7 @@ def bootstrap_context():
             }), 200
 
         client_password = (os.getenv('HANA_CLIENT_PWD') or '').strip()
+        print(f"[DEBUG bootstrap_context] HANA_CLIENT_PWD available: {bool(client_password)}")
         if not client_password:
             return jsonify({
                 "userContext": {
@@ -218,6 +222,7 @@ def bootstrap_context():
             }), 200
 
         success, message = test_db_connection(db_user=hana_db_user, db_password=client_password)
+        print(f"[DEBUG bootstrap_context] test_db_connection result: success={success}, message={message}")
 
         business_role = get_user_role_from_hana(email)
         resolved_user_ctx = {

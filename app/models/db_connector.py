@@ -181,6 +181,7 @@ def get_db_connection(db_user='', db_password=''):
         port = int(creds["port"])
         encrypt, ssl_validate = _get_connection_security_settings()
         effective_password = db_password or creds["password"]
+        print(f"[DEBUG get_db_connection] Intentando conexión con: host={creds['host']}, port={port}, user={effective_user}, encrypt={encrypt}, ssl_validate={ssl_validate}")
         conn = dbapi.connect(
             address=creds["host"],
             port=port,
@@ -189,16 +190,19 @@ def get_db_connection(db_user='', db_password=''):
             encrypt=encrypt, # type: ignore
             sslValidateCertificate=ssl_validate, # type: ignore
         )
+        print(f"[DEBUG get_db_connection] Conexión exitosa con user: {effective_user}")
         return conn
     except Exception as e:
-        print(f"Error conectando a HANA ({creds['source']}, mode={auth_mode}, user={effective_user}): {e}")
+        print(f"[ERROR get_db_connection] Error conectando a HANA ({creds['source']}, mode={auth_mode}, user={effective_user}): {type(e).__name__}: {e}")
         return None
 
 
 def test_db_connection(db_user='', db_password=''):
     """Prueba la conexion y retorna (bool, mensaje)."""
+    print(f"[DEBUG test_db_connection] Testing connection with db_user={db_user}, db_password={'*' * 10 if db_password else 'None'}")
     conn = get_db_connection(db_user=db_user, db_password=db_password)
     if conn is None:
+        print(f"[DEBUG test_db_connection] get_db_connection devolvió None")
         return False, "No se pudo establecer conexion."
 
     try:
@@ -237,9 +241,12 @@ def query_user_roles_table(email: str):
             f'FROM "{schema}".GLOBALHITSS_EE_USERROLES '
             f'WHERE EMAIL = ?'
         )
+        print(f"[DEBUG query_user_roles_table] Schema: {schema}, Email to search: {normalized_email}")
+        print(f"[DEBUG query_user_roles_table] SQL: {sql}")
         cursor = conn.cursor()
         cursor.execute(sql, (normalized_email,))
         row = cursor.fetchone()
+        print(f"[DEBUG query_user_roles_table] Row fetched: {row}")
         cursor.close()
         conn.close()
 
@@ -260,7 +267,7 @@ def query_user_roles_table(email: str):
             'email': str(row[4] or '').strip().lower(),
         }
     except Exception as e:
-        print(f"query_user_roles_table: error consultando tabla de roles ({e})")
+        print(f"[ERROR query_user_roles_table] Error consultando tabla de roles: {type(e).__name__}: {e}")
         try:
             conn.close()
         except Exception:
