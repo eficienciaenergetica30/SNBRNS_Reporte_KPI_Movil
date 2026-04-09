@@ -13,11 +13,10 @@ def get_gas_data():
 
     try:
         data = GasModel.get_gas_kpis(costcenter, date)
-        if data is not None:
-            return jsonify(data)
-        else:
-            # Asumiendo que el modelo devuelve None en caso de error de DB
+        if data is None:
             return jsonify({"error": "No se pudieron obtener los datos de gas."}), 500
+
+        return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Error en el endpoint /api/gas: {e}")
         return jsonify({"error": "Ocurrió un error interno en el servidor."}), 500

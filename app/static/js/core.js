@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bootstrap = await loadBootstrapContext();
     const canProceed = !!(bootstrap && bootstrap.canProceed);
     window.__dbCanProceed = canProceed;
+    document.body.classList.add('role-' + ((bootstrap && bootstrap.businessRole) || 'tecnico').toLowerCase());
 
     if (!canProceed) {
         const msg = (bootstrap && bootstrap.message)

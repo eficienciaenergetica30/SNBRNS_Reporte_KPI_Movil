@@ -99,7 +99,46 @@ En BTP cockpit:
 2. Asignar role collection al usuario de prueba.
 3. Reingresar a Work Zone y validar acceso.
 
-## 9) Troubleshooting rapido
+## 9) Control de acceso por rol (RBAC)
+
+La app consume la vista `CV_USERROLES` en HANA para determinar si el usuario es `ADMIN` o `TECNICO`.
+
+### Variables de entorno requeridas
+
+```bash
+cf set-env snbrns-reporte-kpis-dev HANA_VIEW_USERROLES "globalhitss.ee.models.CalculationViews::CV_USERROLES"
+```
+
+> En `.env` local ya esta configurado. En CF se debe añadir manualmente.
+
+### Comportamiento por rol
+
+| Funcionalidad | ADMIN | TECNICO |
+|---|---|---|
+| Energía: Factor potencia + gráfica Consumo Diario por Hora | ✗ oculto | ✓ |
+| Energía: Precio promedio por kWh + Costo por kWh | ✓ | ✗ oculto |
+| Agua: Consumo Diario por Hora | ✗ oculto | ✓ |
+| Gas: Consumo Diario por Hora | ✗ oculto | ✓ |
+| Temperatura: Promedio + Min/Max + gráfica por hora | ✗ oculto | ✓ |
+
+### Flujo de resolución de rol
+
+1. `bootstrap-context` llama `get_user_role_from_hana(email, derived_user)`.
+2. Si el usuario no existe en `CV_USERROLES`, el rol cae a `TECNICO` (deny-by-default).
+3. El frontend recibe `businessRole` en la respuesta del bootstrap.
+4. `core.js` aplica la clase CSS `role-tecnico` o `role-admin` en `<body>`.
+5. Los elementos con clase `role-tecnico-hide` y `role-admin-hide` se ocultan via CSS.
+6. Los endpoints backend retornan payload completo; la restricción es solo visual (frontend).
+
+### Vista HANA requerida
+
+```sql
+-- Estructura esperada de CV_USERROLES
+SELECT "ROL_V", "EMAIL", "USER" FROM "<SCHEMA>"."globalhitss.ee.models.CalculationViews::CV_USERROLES"
+-- ROL_V debe ser 'ADMIN' o 'TECNICO'
+```
+
+## 10) Troubleshooting rapido
 - Error de bind de servicio: revisar nombre de XSUAA en `manifest.yml`.
 - Error de conexion HANA: revisar `cf env snbrns-reporte-kpis-dev` y confirmar `HANA_HOST`, `HANA_PORT`, `HANA_UID`/`HANA_USER`, `HANA_PWD`/`HANA_PASSWORD` y `HANA_SCHEMA`.
 - Sin identidad en Launchpad: revisar headers/token entregados por el flujo de acceso.
