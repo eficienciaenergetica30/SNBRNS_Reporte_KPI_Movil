@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 from app.models.core_model import get_sites, get_max_date
-from app.models.db_connector import derive_db_user_from_email, test_db_connection
+from app.models.db_connector import derive_db_user_from_email, test_db_connection, get_user_role_from_hana
 
 api_core_bp = Blueprint('api_core', __name__)
 
@@ -188,12 +188,20 @@ def bootstrap_context():
         test_user = derived_user if db_auth_mode in {'derived', 'auto'} else ''
         success, message = test_db_connection(db_user=test_user)
 
+        # Consultar rol solo cuando la DB esta disponible
+        if success:
+            email = (user_ctx.get('email') or '').strip()
+            business_role = get_user_role_from_hana(email, derived_user)
+        else:
+            business_role = 'TECNICO'
+
         return jsonify({
             "userContext": user_ctx,
             "dbAuthMode": db_auth_mode,
             "dbReady": success,
             "canProceed": success,
             "message": message,
+            "businessRole": business_role,
         }), 200
 
     except Exception as e:
@@ -203,4 +211,5 @@ def bootstrap_context():
             "dbReady": False,
             "canProceed": False,
             "message": f"bootstrap-context error: {e}",
+            "businessRole": "TECNICO",
         }), 200

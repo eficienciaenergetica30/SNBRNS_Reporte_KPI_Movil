@@ -226,3 +226,51 @@ def test_db_connection(db_user=''):
         return False, "Fallo query DUMMY."
     except Exception as e:
         return False, f"Error BDD: {str(e)}"
+
+
+def get_user_role_from_hana(email: str, db_user: str) -> str:
+    """
+    Consulta CV_USERROLES para obtener el rol del usuario.
+    Retorna 'ADMIN' o 'TECNICO'. Ante cualquier fallo retorna 'TECNICO'.
+    Prioridad: si el usuario tiene ambos roles, ADMIN gana.
+    """
+    schema = os.getenv('HANA_SCHEMA', '')
+    view_short = os.getenv(
+        'HANA_VIEW_USERROLES',
+        'globalhitss.ee.models.CalculationViews::CV_USERROLES'
+    )
+    if not schema:
+        print("get_user_role_from_hana: HANA_SCHEMA no configurado, fallback TECNICO")
+        return 'TECNICO'
+
+    normalized_email = (email or '').strip().lower()
+    normalized_user = (db_user or '').strip().upper()
+
+    # Conexion con usuario tecnico (no derivado) para leer la vista de roles
+    conn = get_db_connection(db_user='')
+    if conn is None:
+        print("get_user_role_from_hana: sin conexion, fallback TECNICO")
+        return 'TECNICO'
+
+    try:
+        view_full = f'"{schema}"."{view_short}"'
+        sql = f'SELECT "ROL_V" FROM {view_full} WHERE "EMAIL" = ? AND "USER" = ?'
+        cursor = conn.cursor()
+        cursor.execute(sql, (normalized_email, normalized_user))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        roles = {str(r[0]).strip().upper() for r in rows if r and r[0]}
+        if 'ADMIN' in roles:
+            return 'ADMIN'
+        if 'TECNICO' in roles:
+            return 'TECNICO'
+        return 'TECNICO'  # sin registro => restriccion por defecto
+    except Exception as e:
+        print(f"get_user_role_from_hana: error consultando rol ({e}), fallback TECNICO")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return 'TECNICO'
