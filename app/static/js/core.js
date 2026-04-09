@@ -33,16 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         userIdentityText.textContent = value;
     }
 
-    function extractDerivedUserFromEmail(email) {
-        if (!email || !email.includes('@')) return '';
-        const localPart = email.split('@')[0];
-        // Remover puntos, guiones bajos, comas y tomar los primeros 20 caracteres
-        return localPart
-            .substring(0, 20)
-            .replace(/[._,]/g, '')
-            .toUpperCase();
-    }
-
     function setUserIdentitySource(source) {
         if (!userIdentitySource) return;
 
@@ -63,15 +53,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         userIdentitySource.textContent = labels[normalized] || `Source: ${normalized}`;
     }
 
-    function setUserIdentityDerivedUser(email, derivedUser = '') {
+    function setUserIdentityDerivedUser(dbUser = '') {
         if (!userIdentityDerivedUser) return;
 
-        const resolvedDerivedUser = (typeof derivedUser === 'string' && derivedUser.trim())
-            ? derivedUser.trim()
-            : extractDerivedUserFromEmail(email);
+        const resolvedDbUser = (typeof dbUser === 'string' && dbUser.trim())
+            ? dbUser.trim()
+            : '';
 
-        if (resolvedDerivedUser) {
-            userIdentityDerivedUser.textContent = resolvedDerivedUser;
+        if (resolvedDbUser) {
+            userIdentityDerivedUser.textContent = resolvedDbUser;
         } else {
             userIdentityDerivedUser.textContent = '—';
         }
@@ -97,9 +87,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
             const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
-            const derivedUser = ctx && ctx.derivedUser ? String(ctx.derivedUser).trim() : '';
+            const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
             setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
-            setUserIdentityDerivedUser(userEmail, derivedUser);
+            setUserIdentityDerivedUser(dbUser);
             return data;
         } catch (err) {
             return null;
@@ -126,13 +116,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cargar identidad de usuario con fallback seguro
     setUserIdentityLabel('Usuario no identificado');
     setUserIdentitySource('anonymous');
-    setUserIdentityDerivedUser('', '');
+    setUserIdentityDerivedUser('');
 
     showLoadingOverlay('Validando acceso y conexión a base de datos...');
     const bootstrap = await loadBootstrapContext();
     const canProceed = !!(bootstrap && bootstrap.canProceed);
     window.__dbCanProceed = canProceed;
-    const businessRole = ((bootstrap && bootstrap.businessRole) || 'TECNICO').toString().trim().toUpperCase();
+    const businessRole = ((bootstrap && bootstrap.businessRole) || 'SITIO').toString().trim().toUpperCase();
     document.body.classList.add('role-' + businessRole.toLowerCase());
     window.__businessRole = businessRole;
 
