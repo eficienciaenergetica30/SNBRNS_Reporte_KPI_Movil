@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 from app.models.core_model import get_sites, get_max_date
-from app.models.db_connector import derive_db_user_from_email, test_db_connection, get_user_role_from_hana
+from app.models.db_connector import query_user_roles_table, test_db_connection, get_user_role_from_hana
 
 api_core_bp = Blueprint('api_core', __name__)
 
@@ -25,7 +25,7 @@ def _decode_jwt_payload(token):
         return None
 
 
-def _build_user_context(authenticated, source, user_id='', full_name='', email='', derived_user='', warnings=None):
+def _build_user_context(authenticated, source, user_id='', full_name='', email='', db_user='', warnings=None):
     label = full_name or user_id or 'Usuario no identificado'
     return {
         "authenticated": authenticated,
@@ -33,14 +33,14 @@ def _build_user_context(authenticated, source, user_id='', full_name='', email='
         "id": user_id,
         "fullName": full_name,
         "email": email,
-        "derivedUser": derived_user,
+        "dbUser": db_user,
         "label": label,
         "warnings": warnings or []
     }
 
 
 def _resolve_user_context():
-    """Obtiene contexto de usuario con fallback seguro y usuario DB derivado."""
+    """Obtiene contexto de usuario con fallback seguro usando el correo como identidad principal."""
     # 1) Headers típicos de Launchpad / Approuter
     user_id = (request.headers.get('x-sap-user') or '').strip()
     full_name = (request.headers.get('x-sap-user-name') or '').strip()
@@ -53,7 +53,6 @@ def _resolve_user_context():
             user_id,
             full_name,
             email,
-            derive_db_user_from_email(email),
         )
 
     # 2) Bearer token JWT
@@ -78,7 +77,6 @@ def _resolve_user_context():
                     token_user_id,
                     token_full_name,
                     token_email,
-                    derive_db_user_from_email(token_email),
                 )
 
     # 3) Fallback local para desarrollo
@@ -93,7 +91,6 @@ def _resolve_user_context():
             local_id,
             local_name,
             local_email,
-            derive_db_user_from_email(local_email),
         )
 
     # 4) Usuario anónimo
@@ -155,48 +152,81 @@ def bootstrap_context():
     """
     Preflight para UI:
     - Resuelve identidad
-    - Deriva usuario DB
-    - Prueba conexion HANA segun modo de autenticacion
+    - Busca usuario/rol en tabla por correo con credenciales tecnicas
+    - Valida conexion HANA final con USER de tabla + HANA_CLIENT_PWD
     Siempre retorna HTTP 200 con canProceed/dbReady.
     """
     try:
         user_ctx = _resolve_user_context()
-        db_auth_mode = (os.getenv('DB_AUTH_MODE') or 'technical').strip().lower()
-        if db_auth_mode not in {'technical', 'derived', 'auto'}:
-            db_auth_mode = 'technical'
+        db_auth_mode = 'table-email'
+        email = (user_ctx.get('email') or '').strip().lower()
 
-        derived_user = (user_ctx.get('derivedUser') or '').strip()
-
-        if db_auth_mode == 'derived' and not user_ctx.get('authenticated', False):
+        if not email:
             return jsonify({
                 "userContext": user_ctx,
                 "dbAuthMode": db_auth_mode,
                 "dbReady": False,
                 "canProceed": False,
-                "message": "Usuario no autenticado para conexion DB derivada.",
+                "message": "No se pudo recuperar el correo del usuario autenticado.",
             }), 200
 
-        if db_auth_mode == 'derived' and not derived_user:
+        user_record = query_user_roles_table(email)
+        if not user_record:
             return jsonify({
                 "userContext": user_ctx,
                 "dbAuthMode": db_auth_mode,
                 "dbReady": False,
                 "canProceed": False,
-                "message": "No se pudo derivar usuario DB desde el correo.",
+                "message": "Usuario no autorizado. El correo no existe en la tabla de roles.",
             }), 200
 
-        test_user = derived_user if db_auth_mode in {'derived', 'auto'} else ''
-        success, message = test_db_connection(db_user=test_user)
+        if int(user_record.get('deletionRequest') or 0) == 1:
+            return jsonify({
+                "userContext": {
+                    **user_ctx,
+                    "dbUser": user_record.get('user') or '',
+                },
+                "dbAuthMode": db_auth_mode,
+                "dbReady": False,
+                "canProceed": False,
+                "message": "Usuario desactivado.",
+                "businessRole": str(user_record.get('role') or 'SITIO').strip().upper(),
+            }), 200
 
-        # Consultar rol solo cuando la DB esta disponible
-        if success:
-            email = (user_ctx.get('email') or '').strip()
-            business_role = get_user_role_from_hana(email, derived_user)
-        else:
-            business_role = 'TECNICO'
+        hana_db_user = str(user_record.get('user') or '').strip().upper()
+        if not hana_db_user:
+            return jsonify({
+                "userContext": user_ctx,
+                "dbAuthMode": db_auth_mode,
+                "dbReady": False,
+                "canProceed": False,
+                "message": "La tabla de roles no devolvio un USER valido para HANA.",
+            }), 200
+
+        client_password = (os.getenv('HANA_CLIENT_PWD') or '').strip()
+        if not client_password:
+            return jsonify({
+                "userContext": {
+                    **user_ctx,
+                    "dbUser": hana_db_user,
+                },
+                "dbAuthMode": db_auth_mode,
+                "dbReady": False,
+                "canProceed": False,
+                "message": "No se encontro HANA_CLIENT_PWD en la configuracion.",
+                "businessRole": str(user_record.get('role') or 'SITIO').strip().upper(),
+            }), 200
+
+        success, message = test_db_connection(db_user=hana_db_user, db_password=client_password)
+
+        business_role = get_user_role_from_hana(email)
+        resolved_user_ctx = {
+            **user_ctx,
+            "dbUser": hana_db_user,
+        }
 
         return jsonify({
-            "userContext": user_ctx,
+            "userContext": resolved_user_ctx,
             "dbAuthMode": db_auth_mode,
             "dbReady": success,
             "canProceed": success,
@@ -207,9 +237,9 @@ def bootstrap_context():
     except Exception as e:
         return jsonify({
             "userContext": _build_user_context(False, 'anonymous', warnings=[f"bootstrap error: {e}"]),
-            "dbAuthMode": (os.getenv('DB_AUTH_MODE') or 'technical').strip().lower(),
+            "dbAuthMode": 'table-email',
             "dbReady": False,
             "canProceed": False,
             "message": f"bootstrap-context error: {e}",
-            "businessRole": "TECNICO",
+            "businessRole": "SITIO",
         }), 200

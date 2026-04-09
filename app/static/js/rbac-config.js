@@ -1,14 +1,17 @@
 // rbac-config.js - Configuracion central de visibilidad por rol y modulo (frontend-only)
 
 (function () {
-    const DEFAULT_ROLE = 'TECNICO';
+    const DEFAULT_ROLE = 'SITIO';
 
     const RBAC_VISIBILITY_CONFIG = {
         energy: {
             ADMIN: {
                 hide: ['#energyCardPfAvg', '#energySectionHourlyConsumption'],
             },
-            TECNICO: {
+            SITIO: {
+                hide: ['#energyCardAvgPrice', '#energyCardCostPerKwh'],
+            },
+            GERENCIA: {
                 hide: ['#energyCardAvgPrice', '#energyCardCostPerKwh'],
             },
         },
@@ -16,7 +19,10 @@
             ADMIN: {
                 hide: ['#waterSectionHourlyConsumption'],
             },
-            TECNICO: {
+            SITIO: {
+                hide: [],
+            },
+            GERENCIA: {
                 hide: [],
             },
         },
@@ -24,7 +30,10 @@
             ADMIN: {
                 hide: ['#gasSectionHourlyConsumption'],
             },
-            TECNICO: {
+            SITIO: {
+                hide: [],
+            },
+            GERENCIA: {
                 hide: [],
             },
         },
@@ -32,7 +41,10 @@
             ADMIN: {
                 hide: ['#tempCardAvg', '#tempCardRange', '#tempSectionHourlyChart'],
             },
-            TECNICO: {
+            SITIO: {
+                hide: [],
+            },
+            GERENCIA: {
                 hide: [],
             },
         },

@@ -99,6 +99,12 @@ def _resolve_hana_credentials():
     return _vcap_services_credentials()
 
 
+def _get_connection_security_settings():
+    encrypt = (os.getenv("HANA_ENCRYPT") or "true").strip().lower() == 'true'
+    ssl_validate = (os.getenv("HANA_SSL_VALIDATE") or "false").strip().lower() == 'true'
+    return encrypt, ssl_validate
+
+
 def _decode_jwt_payload(token):
     """Decodifica payload JWT sin validar firma. Retorna dict o None."""
     try:
@@ -113,21 +119,6 @@ def _decode_jwt_payload(token):
         return payload if isinstance(payload, dict) else None
     except Exception:
         return None
-
-
-def derive_db_user_from_email(email):
-    """
-    Deriva usuario HANA desde correo:
-    - tomar local-part (antes de @)
-    - maximo 20 caracteres
-    - remover puntos, guiones bajos y comas
-    - convertir a mayusculas
-    """
-    if not isinstance(email, str) or '@' not in email:
-        return ''
-
-    local_part = email.split('@')[0]
-    return local_part[:20].replace('.', '').replace('_', '').replace(',', '').upper()
 
 
 def _get_db_auth_mode():
@@ -151,19 +142,13 @@ def _extract_email_from_request():
             return str(payload.get('email') or payload.get('mail') or '').strip()
 
     return ''
-
-
-def get_request_derived_user():
-    return derive_db_user_from_email(_extract_email_from_request())
-
-
 def _resolve_effective_user(base_user, requested_user=''):
     mode = _get_db_auth_mode()
 
     if mode == 'technical':
         return base_user, mode
 
-    candidate = (requested_user or get_request_derived_user() or '').strip().upper()
+    candidate = (requested_user or '').strip().upper()
     if candidate:
         return candidate, mode
 
@@ -173,7 +158,7 @@ def _resolve_effective_user(base_user, requested_user=''):
     return None, mode
 
 
-def get_db_connection(db_user=''):
+def get_db_connection(db_user='', db_password=''):
     """
     Establece y retorna una conexion a SAP HANA.
 
@@ -194,13 +179,15 @@ def get_db_connection(db_user=''):
 
     try:
         port = int(creds["port"])
+        encrypt, ssl_validate = _get_connection_security_settings()
+        effective_password = db_password or creds["password"]
         conn = dbapi.connect(
             address=creds["host"],
             port=port,
             user=effective_user,
-            password=creds["password"],
-            encrypt=True, # type: ignore
-            sslValidateCertificate=False, # type: ignore
+            password=effective_password,
+            encrypt=encrypt, # type: ignore
+            sslValidateCertificate=ssl_validate, # type: ignore
         )
         return conn
     except Exception as e:
@@ -208,9 +195,9 @@ def get_db_connection(db_user=''):
         return None
 
 
-def test_db_connection(db_user=''):
+def test_db_connection(db_user='', db_password=''):
     """Prueba la conexion y retorna (bool, mensaje)."""
-    conn = get_db_connection(db_user=db_user)
+    conn = get_db_connection(db_user=db_user, db_password=db_password)
     if conn is None:
         return False, "No se pudo establecer conexion."
 
@@ -228,49 +215,69 @@ def test_db_connection(db_user=''):
         return False, f"Error BDD: {str(e)}"
 
 
-def get_user_role_from_hana(email: str, db_user: str) -> str:
+def query_user_roles_table(email: str):
     """
-    Consulta CV_USERROLES para obtener el rol del usuario.
-    Retorna 'ADMIN' o 'TECNICO'. Ante cualquier fallo retorna 'TECNICO'.
-    Prioridad: si el usuario tiene ambos roles, ADMIN gana.
+    Consulta la tabla de roles por correo usando credenciales tecnicas.
+    Retorna un dict con USER, ROL, EMAIL, DELETIONREQUEST o None si no existe.
     """
-    schema = os.getenv('HANA_SCHEMA', '')
-    view_short = os.getenv(
-        'HANA_VIEW_USERROLES',
-        'globalhitss.ee.models.CalculationViews::CV_USERROLES'
-    )
-    if not schema:
-        print("get_user_role_from_hana: HANA_SCHEMA no configurado, fallback TECNICO")
-        return 'TECNICO'
-
+    schema = os.getenv('HANA_SCHEMA', '').strip()
     normalized_email = (email or '').strip().lower()
-    normalized_user = (db_user or '').strip().upper()
 
-    # Conexion con usuario tecnico (no derivado) para leer la vista de roles
+    if not schema or not normalized_email:
+        return None
+
     conn = get_db_connection(db_user='')
     if conn is None:
-        print("get_user_role_from_hana: sin conexion, fallback TECNICO")
-        return 'TECNICO'
+        print("query_user_roles_table: sin conexion tecnica")
+        return None
 
     try:
-        view_full = f'"{schema}"."{view_short}"'
-        sql = f'SELECT "ROL_V" FROM {view_full} WHERE "EMAIL" = ? AND "USER" = ?'
+        sql = (
+            f'SELECT "USER", ROL, "FILTER", DELETIONREQUEST, EMAIL '
+            f'FROM "{schema}".GLOBALHITSS_EE_USERROLES '
+            f'WHERE EMAIL = ?'
+        )
         cursor = conn.cursor()
-        cursor.execute(sql, (normalized_email, normalized_user))
-        rows = cursor.fetchall()
+        cursor.execute(sql, (normalized_email,))
+        row = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        roles = {str(r[0]).strip().upper() for r in rows if r and r[0]}
-        if 'ADMIN' in roles:
-            return 'ADMIN'
-        if 'TECNICO' in roles:
-            return 'TECNICO'
-        return 'TECNICO'  # sin registro => restriccion por defecto
+        if not row:
+            return None
+
+        deletion_request = row[3]
+        try:
+            deletion_request = int(deletion_request)
+        except (TypeError, ValueError):
+            deletion_request = 0
+
+        return {
+            'user': str(row[0] or '').strip().upper(),
+            'role': str(row[1] or '').strip().upper(),
+            'filter': row[2],
+            'deletionRequest': deletion_request,
+            'email': str(row[4] or '').strip().lower(),
+        }
     except Exception as e:
-        print(f"get_user_role_from_hana: error consultando rol ({e}), fallback TECNICO")
+        print(f"query_user_roles_table: error consultando tabla de roles ({e})")
         try:
             conn.close()
         except Exception:
             pass
-        return 'TECNICO'
+        return None
+
+
+def get_user_role_from_hana(email: str) -> str:
+    """
+    Consulta la tabla de roles para obtener el rol del usuario.
+    Retorna ADMIN, SITIO o GERENCIA. Ante cualquier fallo retorna SITIO.
+    """
+    user_record = query_user_roles_table(email)
+    if not user_record:
+        return 'SITIO'
+
+    role = str(user_record.get('role') or '').strip().upper()
+    if role in {'ADMIN', 'SITIO', 'GERENCIA'}:
+        return role
+    return 'SITIO'
