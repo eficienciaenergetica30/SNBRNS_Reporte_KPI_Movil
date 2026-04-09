@@ -8,10 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ESCUCHAMOS EL EVENTO DESDE CORE.JS
 document.addEventListener('DashboardRefreshRequired', async (e) => {
-    const { costCenter, date, inputName } = e.detail;
+    const { costCenter, date, inputName, siteName } = e.detail;
 
     try {
-        const energy = await window.fetchData('/api/energy/today', costCenter, date);
+        const energy = await window.fetchData('/api/energy/today', costCenter, date, siteName);
 
         const validSiteName = (energy && energy.site_name && energy.site_name !== 'Sitio Desconocido')
             ? energy.site_name

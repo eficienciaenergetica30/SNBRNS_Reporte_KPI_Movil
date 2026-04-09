@@ -7,12 +7,13 @@ api_gas_bp = Blueprint('api_gas_bp', __name__)
 def get_gas_data():
     costcenter = request.args.get('costcenter')
     date = request.args.get('date')
+    sitename = request.args.get('sitename', '').strip()
 
     if not costcenter or not date:
         return jsonify({"error": "Parámetros 'costcenter' y 'date' son requeridos."}), 400
 
     try:
-        data = GasModel.get_gas_kpis(costcenter, date)
+        data = GasModel.get_gas_kpis(costcenter, date, sitename)
         if data is None:
             return jsonify({"error": "No se pudieron obtener los datos de gas."}), 500
 

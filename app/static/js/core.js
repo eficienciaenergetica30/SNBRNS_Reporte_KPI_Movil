@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userIdentityDerivedUser = document.getElementById('userIdentityDerivedUser');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingOverlayText = document.getElementById('loadingOverlayText');
+    let selectedSiteName = '';
 
     function showLoadingOverlay(message = 'Cargando datos del sitio...') {
         if (loadingOverlayText && message) {
@@ -243,6 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Limpiar selección de sitio cuando navegas a otro módulo
             if (siteInput) siteInput.value = '';
             if (hiddenCostCenter) hiddenCostCenter.value = '';
+            selectedSiteName = '';
             if (dashboardMain) dashboardMain.classList.add('hidden');
             document.getElementById('emptyState')?.classList.remove('hidden');
             // Nota: Los sitios se recargarán automáticamente cuando DOMContentLoaded se dispare en la nueva página
@@ -275,6 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Si borra el texto, quitar selección
             if (e.target.value.trim() === '') {
                 hiddenCostCenter.value = '';
+                selectedSiteName = '';
                 dashboardMain.classList.add('hidden');
                 document.getElementById('emptyState')?.classList.remove('hidden');
             }
@@ -293,6 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Limpiar selección de sitio
             hiddenCostCenter.value = '';
+            selectedSiteName = '';
             
             // Ocultar dashboard y mostrar empty state
             if (dashboardMain) dashboardMain.classList.add('hidden');
@@ -350,6 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 siteInput.value = `${site.name} (${site.id})`;
                 updateClearButtonVisibility(siteInput.value);
                 hiddenCostCenter.value = site.id;
+                selectedSiteName = site.name;
                 dropdown.classList.add('hidden');
 
                 // DISPARAR BÚSQUEDA GLOBAL
@@ -376,10 +381,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('emptyState')?.classList.add('hidden');
 
         const inputName = siteInput ? siteInput.value : costCenter;
+        const siteName = selectedSiteName || '';
 
         // Disparamos un evento custom para que 'energia.js', 'agua.js', etc, lo escuchen y procesen su propia data
         const event = new CustomEvent('DashboardRefreshRequired', {
-            detail: { costCenter, date, inputName }
+            detail: { costCenter, date, inputName, siteName }
         });
         document.dispatchEvent(event);
     }
@@ -393,13 +399,14 @@ window.showLoading = function (show) {
     else el.classList.add('hidden');
 }
 
-window.fetchData = async function (url, costCenter, date) {
+window.fetchData = async function (url, costCenter, date, siteName = '') {
     if (!window.__dbCanProceed) {
         return null;
     }
 
     try {
-        const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}`);
+        const siteNameParam = siteName ? `&sitename=${encodeURIComponent(siteName)}` : '';
+        const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}${siteNameParam}`);
         if (!res.ok) return null;
         return await res.json();
     } catch (e) {
