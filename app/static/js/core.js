@@ -308,7 +308,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Ocultar botón X
             clearBtn.classList.add('hidden');
-            
+
+            // Resetear título al default del módulo actual
+            const defaultTitles = {
+                energy: 'Dashboard Eléctrico',
+                water: 'Dashboard Hídrico',
+                gas: 'Dashboard de Gas',
+                temperatura: 'Dashboard de Temperatura',
+            };
+            const titleEl = document.getElementById('dashboardTitle');
+            if (titleEl) titleEl.textContent = defaultTitles[getCurrentModule()] || '';
+
             console.log('✓ Búsqueda limpiada');
         });
     }
