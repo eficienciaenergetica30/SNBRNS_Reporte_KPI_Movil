@@ -146,29 +146,43 @@ class TemperaturaModel:
             if normalized_sitename:
                 hourly_query = f'''
                     SELECT
-                        HOUR(T1."HOUR") AS "HOUR",
-                        IFNULL(AVG(T1."DEGREES"), 0) AS "ACTUAL"
-                    FROM "{schema}"."{view}" T1
-                    WHERE T1."COSTCENTER" = ?
-                      AND T1."DATE_D" = ?
-                      AND T1."BLOCK" = ?
-                      AND T1."NAME" = ?
-                      AND T1."DEGREES" IS NOT NULL
-                    GROUP BY HOUR(T1."HOUR")
+                        HOUR("HOUR") AS "HOUR",
+                        SUM("ACTUAL") / SUM("CONTADOR") AS "ACTUAL"
+                    FROM (
+                        SELECT
+                            T1.HHMMSS,
+                            T1."HOUR",
+                            T1."DEGREES" AS "ACTUAL",
+                            1 AS CONTADOR
+                        FROM "{schema}"."{view}" T1
+                        WHERE T1."COSTCENTER" = ?
+                        AND T1."DATE_D"     = ?
+                        AND T1."BLOCK"      = ?
+                        AND T1."NAME"       = ?
+                        AND T1."DEGREES"    IS NOT NULL
+                    )
+                    GROUP BY HOUR("HOUR")
                     ORDER BY "HOUR" ASC
                 '''
                 cursor.execute(hourly_query, (costcenter, date, block, normalized_sitename))
             else:
                 hourly_query = f'''
                     SELECT
-                        HOUR(T1."HOUR") AS "HOUR",
-                        IFNULL(AVG(T1."DEGREES"), 0) AS "ACTUAL"
-                    FROM "{schema}"."{view}" T1
-                    WHERE T1."COSTCENTER" = ?
-                      AND T1."DATE_D" = ?
-                      AND T1."BLOCK" = ?
-                      AND T1."DEGREES" IS NOT NULL
-                    GROUP BY HOUR(T1."HOUR")
+                        HOUR("HOUR") AS "HOUR",
+                        SUM("ACTUAL") / SUM("CONTADOR") AS "ACTUAL"
+                    FROM (
+                        SELECT
+                            T1.HHMMSS,
+                            T1."HOUR",
+                            T1."DEGREES" AS "ACTUAL",
+                            1 AS CONTADOR
+                        FROM "{schema}"."{view}" T1
+                        WHERE T1."COSTCENTER" = ?
+                        AND T1."DATE_D"     = ?
+                        AND T1."BLOCK"      = ?
+                        AND T1."DEGREES"    IS NOT NULL
+                    )
+                    GROUP BY HOUR("HOUR")
                     ORDER BY "HOUR" ASC
                 '''
                 cursor.execute(hourly_query, (costcenter, date, block))
