@@ -4,6 +4,32 @@
 let allSites = [];
 window.__dbCanProceed = false;
 
+function getProgressBarConfig() {
+    const config = window.FRONTEND_UI_CONFIG && window.FRONTEND_UI_CONFIG.progressBars
+        ? window.FRONTEND_UI_CONFIG.progressBars
+        : {};
+    const thresholds = config.thresholds || {};
+    const colors = config.colors || {};
+
+    return {
+        thresholds: {
+            greenMax: Number.isFinite(thresholds.greenMax) ? thresholds.greenMax : 40,
+            yellowMax: Number.isFinite(thresholds.yellowMax) ? thresholds.yellowMax : 80,
+        },
+        colors: {
+            low: colors.low || 'bg-green-500',
+            medium: colors.medium || 'bg-yellow-400',
+            high: colors.high || 'bg-red-600',
+        },
+        chartColors: {
+            low: config.chartColors && config.chartColors.low ? config.chartColors.low : '#22c55e',
+            medium: config.chartColors && config.chartColors.medium ? config.chartColors.medium : '#facc15',
+            high: config.chartColors && config.chartColors.high ? config.chartColors.high : '#dc2626',
+            remaining: config.chartColors && config.chartColors.remaining ? config.chartColors.remaining : '#e2e8f0',
+        },
+    };
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const siteInput = document.getElementById('siteSearchInput');
     const dateInput = document.getElementById('datePicker');
@@ -15,7 +41,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userIdentityDerivedUser = document.getElementById('userIdentityDerivedUser');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingOverlayText = document.getElementById('loadingOverlayText');
+    const BOOTSTRAP_CONTEXT_KEY = 'bootstrapContextSession';
+    const SITE_SELECTION_KEY = 'selectedSiteSession';
     let selectedSiteName = '';
+
+    function getSiteDisplayValue(siteName, siteId) {
+        const resolvedName = typeof siteName === 'string' ? siteName.trim() : '';
+        const resolvedId = typeof siteId === 'string' || typeof siteId === 'number'
+            ? String(siteId).trim()
+            : '';
+
+        if (resolvedName && resolvedId) {
+            return `${resolvedName} (${resolvedId})`;
+        }
+
+        return resolvedName || resolvedId;
+    }
+
+    function saveSiteSelection(siteId, siteName, inputValue) {
+        const resolvedId = typeof siteId === 'string' || typeof siteId === 'number'
+            ? String(siteId).trim()
+            : '';
+        const resolvedName = typeof siteName === 'string' ? siteName.trim() : '';
+        const resolvedInput = typeof inputValue === 'string' && inputValue.trim()
+            ? inputValue.trim()
+            : getSiteDisplayValue(resolvedName, resolvedId);
+
+        if (!resolvedId) {
+            sessionStorage.removeItem(SITE_SELECTION_KEY);
+            return;
+        }
+
+        sessionStorage.setItem(SITE_SELECTION_KEY, JSON.stringify({
+            costCenter: resolvedId,
+            siteName: resolvedName,
+            inputValue: resolvedInput,
+        }));
+    }
+
+    function getSavedSiteSelection() {
+        const rawValue = sessionStorage.getItem(SITE_SELECTION_KEY);
+        if (!rawValue) return null;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            const costCenter = parsed && parsed.costCenter ? String(parsed.costCenter).trim() : '';
+            if (!costCenter) {
+                sessionStorage.removeItem(SITE_SELECTION_KEY);
+                return null;
+            }
+
+            return {
+                costCenter,
+                siteName: parsed && parsed.siteName ? String(parsed.siteName).trim() : '',
+                inputValue: parsed && parsed.inputValue ? String(parsed.inputValue).trim() : '',
+            };
+        } catch (err) {
+            sessionStorage.removeItem(SITE_SELECTION_KEY);
+            return null;
+        }
+    }
+
+    function clearSavedSiteSelection() {
+        sessionStorage.removeItem(SITE_SELECTION_KEY);
+    }
+
+    function clearCurrentSiteSelection() {
+        if (siteInput) siteInput.value = '';
+        if (hiddenCostCenter) hiddenCostCenter.value = '';
+        selectedSiteName = '';
+
+        if (dashboardMain) dashboardMain.classList.add('hidden');
+        document.getElementById('emptyState')?.classList.remove('hidden');
+        updateClearButtonVisibility('');
+    }
+
+    function restoreSavedSiteSelection() {
+        const savedSelection = getSavedSiteSelection();
+        if (!savedSelection) {
+            return false;
+        }
+
+        const matchedSite = allSites.find(site => String(site.id).trim() === savedSelection.costCenter);
+        if (!matchedSite) {
+            clearCurrentSiteSelection();
+            return false;
+        }
+
+        const resolvedSiteName = String(matchedSite.name || savedSelection.siteName || '').trim();
+        const resolvedInputValue = savedSelection.inputValue || getSiteDisplayValue(resolvedSiteName, matchedSite.id);
+
+        if (siteInput) siteInput.value = resolvedInputValue;
+        if (hiddenCostCenter) hiddenCostCenter.value = String(matchedSite.id).trim();
+        selectedSiteName = resolvedSiteName;
+        updateClearButtonVisibility(resolvedInputValue);
+        saveSiteSelection(matchedSite.id, resolvedSiteName, resolvedInputValue);
+        return true;
+    }
 
     function showLoadingOverlay(message = 'Cargando datos del sitio...') {
         if (loadingOverlayText && message) {
@@ -68,7 +190,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function applyBootstrapContext(data) {
+        const ctx = data && data.userContext ? data.userContext : {};
+        setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
+        const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
+        const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
+        setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
+        setUserIdentityDerivedUser(dbUser);
+    }
+
+    function getSavedBootstrapContext() {
+        const rawValue = sessionStorage.getItem(BOOTSTRAP_CONTEXT_KEY);
+        if (!rawValue) return null;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            if (!parsed || parsed.canProceed !== true) {
+                sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+                return null;
+            }
+            return parsed;
+        } catch (err) {
+            sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+            return null;
+        }
+    }
+
+    function saveBootstrapContext(data) {
+        if (!data || data.canProceed !== true) {
+            sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+            return;
+        }
+
+        sessionStorage.setItem(BOOTSTRAP_CONTEXT_KEY, JSON.stringify(data));
+    }
+
     async function loadBootstrapContext() {
+        const cachedBootstrap = getSavedBootstrapContext();
+        if (cachedBootstrap) {
+            applyBootstrapContext(cachedBootstrap);
+            return cachedBootstrap;
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -84,13 +247,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const data = await response.json();
-            const ctx = data && data.userContext ? data.userContext : {};
-
-            setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
-            const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
-            const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
-            setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
-            setUserIdentityDerivedUser(dbUser);
+            applyBootstrapContext(data);
+            saveBootstrapContext(data);
             return data;
         } catch (err) {
             return null;
@@ -109,9 +267,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const minStr = fechaMinima.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
 
     if (dateInput) {
-        dateInput.value = hoyStr; // Fecha por defecto: hoy
-        dateInput.max = hoyStr;   // Prohibido seleccionar el futuro
-        dateInput.min = minStr;   // Prohibido viajar en el tiempo hace más de 4 meses
+        if (typeof window.flatpickr === 'function') {
+            window.flatpickr(dateInput, {
+                locale: window.flatpickr.l10ns.es,
+                dateFormat: 'Y-m-d',
+                defaultDate: hoyStr,
+                maxDate: hoyStr,
+                minDate: minStr,
+                allowInput: false,
+                disableMobile: true,
+                monthSelectorType: 'static',
+                onChange: function (_, dateStr) {
+                    dateInput.value = dateStr;
+                    dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+                },
+            });
+        } else {
+            dateInput.value = hoyStr; // Fecha por defecto: hoy
+            dateInput.max = hoyStr;   // Prohibido seleccionar el futuro
+            dateInput.min = minStr;   // Prohibido viajar en el tiempo hace más de 4 meses
+        }
     }
 
     // Cargar identidad de usuario con fallback seguro
@@ -236,21 +411,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Cargar Sitios Inicialmente
     await loadSitesForModule();
-
-    // 1b. Listener de navegación entre módulos (para limpiar estado y recargar sitios)
-    const navLinks = document.querySelectorAll('a[href*=\"/energia\"], a[href*=\"/agua\"], a[href*=\"/gas\"], a[href*=\"/temperatura\"]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            // Limpiar selección de sitio cuando navegas a otro módulo
-            if (siteInput) siteInput.value = '';
-            if (hiddenCostCenter) hiddenCostCenter.value = '';
-            selectedSiteName = '';
-            if (dashboardMain) dashboardMain.classList.add('hidden');
-            document.getElementById('emptyState')?.classList.remove('hidden');
-            // Nota: Los sitios se recargarán automáticamente cuando DOMContentLoaded se dispare en la nueva página
-            console.log(`→ Navegando a nuevo módulo, limpiando estado...`);
-        });
-    });
+    const restoredSelection = restoreSavedSiteSelection();
+    if (restoredSelection) {
+        triggerDashboardRefresh();
+    }
 
     // --- LÓGICA DEL COMBOBOX ---
     function updateClearButtonVisibility(value) {
@@ -276,10 +440,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Si borra el texto, quitar selección
             if (e.target.value.trim() === '') {
-                hiddenCostCenter.value = '';
-                selectedSiteName = '';
-                dashboardMain.classList.add('hidden');
-                document.getElementById('emptyState')?.classList.remove('hidden');
+                clearSavedSiteSelection();
+                clearCurrentSiteSelection();
             }
 
             updateClearButtonVisibility(e.target.value);
@@ -291,24 +453,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (clearBtn && siteInput) {
         clearBtn.addEventListener('click', () => {
             // Limpiar input
-            siteInput.value = '';
             siteInput.focus();
-            
-            // Limpiar selección de sitio
-            hiddenCostCenter.value = '';
-            selectedSiteName = '';
-            
-            // Ocultar dashboard y mostrar empty state
-            if (dashboardMain) dashboardMain.classList.add('hidden');
-            document.getElementById('emptyState')?.classList.remove('hidden');
-            
+            clearSavedSiteSelection();
+            clearCurrentSiteSelection();
+             
             // Mostrar dropdown con lista completa
             dropdown.classList.remove('hidden');
             renderDropdown(allSites, '');
-            
-            // Ocultar botón X
-            clearBtn.classList.add('hidden');
-            
+             
             console.log('✓ Búsqueda limpiada');
         });
     }
@@ -351,10 +503,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             li.addEventListener('click', () => {
-                siteInput.value = `${site.name} (${site.id})`;
-                updateClearButtonVisibility(siteInput.value);
+                const displayValue = getSiteDisplayValue(site.name, site.id);
+                siteInput.value = displayValue;
+                updateClearButtonVisibility(displayValue);
                 hiddenCostCenter.value = site.id;
                 selectedSiteName = site.name;
+                saveSiteSelection(site.id, site.name, displayValue);
                 dropdown.classList.add('hidden');
 
                 // DISPARAR BÚSQUEDA GLOBAL
@@ -414,12 +568,64 @@ window.fetchData = async function (url, costCenter, date, siteName = '') {
     }
 }
 
+window.applyProgressBarThresholdColor = function (progressBar, strictPct, shouldPulse = false) {
+    if (!progressBar) return;
+
+    const progressBarConfig = getProgressBarConfig();
+    const removableColorClasses = Array.from(new Set([
+        'bg-green-500',
+        'bg-yellow-400',
+        'bg-red-600',
+        progressBarConfig.colors.low,
+        progressBarConfig.colors.medium,
+        progressBarConfig.colors.high,
+    ]));
+    const visuals = window.getProgressThresholdVisuals(strictPct);
+
+    progressBar.classList.remove(...removableColorClasses, 'animate-pulse');
+    progressBar.classList.add(visuals.barClass);
+
+    if (shouldPulse) {
+        progressBar.classList.add('animate-pulse');
+    }
+}
+
+window.getProgressThresholdVisuals = function (strictPct) {
+    const normalizedPct = Number.isFinite(strictPct) ? strictPct : 0;
+    const progressBarConfig = getProgressBarConfig();
+
+    if (normalizedPct > progressBarConfig.thresholds.yellowMax) {
+        return {
+            barClass: progressBarConfig.colors.high,
+            chartColor: progressBarConfig.chartColors.high,
+        };
+    }
+
+    if (normalizedPct > progressBarConfig.thresholds.greenMax) {
+        return {
+            barClass: progressBarConfig.colors.medium,
+            chartColor: progressBarConfig.chartColors.medium,
+        };
+    }
+
+    return {
+        barClass: progressBarConfig.colors.low,
+        chartColor: progressBarConfig.chartColors.low,
+    };
+}
+
+window.getProgressRemainingChartColor = function () {
+    return getProgressBarConfig().chartColors.remaining;
+}
+
 // --- LOGICA DE UI (TEMA OSCURO Y SIDEBAR) ---
 const THEME_KEY = 'themePreference';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Tema oscuro con persistencia
     const btn = document.getElementById('themeToggle');
+    const dateInput = document.getElementById('datePicker');
+    const openDatePickerBtn = document.getElementById('openDatePickerBtn');
 
     function applySavedTheme() {
         const savedTheme = localStorage.getItem(THEME_KEY);
@@ -442,6 +648,23 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
             saveTheme(isDark);
+        });
+    }
+
+    if (openDatePickerBtn && dateInput) {
+        openDatePickerBtn.addEventListener('click', () => {
+            if (dateInput._flatpickr) {
+                dateInput._flatpickr.open();
+                return;
+            }
+
+            if (typeof dateInput.showPicker === 'function') {
+                dateInput.showPicker();
+                return;
+            }
+
+            dateInput.focus();
+            dateInput.click();
         });
     }
 

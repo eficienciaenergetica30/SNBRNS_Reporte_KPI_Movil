@@ -4,7 +4,12 @@ import os
 
 from flask import Blueprint, jsonify, request
 from app.models.core_model import get_sites, get_max_date
-from app.models.db_connector import query_user_roles_table, test_db_connection, get_user_role_from_hana
+from app.models.db_connector import (
+    get_local_user_identity,
+    get_user_role_from_hana,
+    query_user_roles_table,
+    test_db_connection,
+)
 
 api_core_bp = Blueprint('api_core', __name__)
 
@@ -80,17 +85,14 @@ def _resolve_user_context():
                 )
 
     # 3) Fallback local para desarrollo
-    local_name = (os.getenv('APP_LOCAL_USER_NAME') or '').strip()
-    local_email = (os.getenv('APP_LOCAL_USER_EMAIL') or '').strip()
-    local_id = (os.getenv('APP_LOCAL_USER_ID') or '').strip()
-
-    if local_id or local_name or local_email:
+    local_identity = get_local_user_identity()
+    if local_identity:
         return _build_user_context(
             False,
             'local',
-            local_id,
-            local_name,
-            local_email,
+            str(local_identity.get('id') or '').strip(),
+            str(local_identity.get('full_name') or '').strip(),
+            str(local_identity.get('email') or '').strip(),
         )
 
     # 4) Usuario anónimo

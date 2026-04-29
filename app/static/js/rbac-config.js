@@ -1,7 +1,26 @@
-// rbac-config.js - Configuracion central de visibilidad por rol y modulo (frontend-only)
+// rbac-config.js - Configuracion central frontend (RBAC + UI)
 
 (function () {
     const DEFAULT_ROLE = 'SITIO';
+    const FRONTEND_UI_CONFIG = {
+        progressBars: {
+            thresholds: {
+                greenMax: 40,
+                yellowMax: 80,
+            },
+            colors: {
+                low: 'bg-green-500',
+                medium: 'bg-yellow-400',
+                high: 'bg-red-600',
+            },
+            chartColors: {
+                low: '#22c55e',
+                medium: '#facc15',
+                high: '#dc2626',
+                remaining: '#e2e8f0',
+            },
+        },
+    };
 
     const RBAC_VISIBILITY_CONFIG = {
         energy: {
@@ -83,5 +102,6 @@
     }
 
     window.RBAC_VISIBILITY_CONFIG = RBAC_VISIBILITY_CONFIG;
+    window.FRONTEND_UI_CONFIG = FRONTEND_UI_CONFIG;
     window.applyRoleVisibility = applyRoleVisibility;
 })();

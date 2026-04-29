@@ -11,15 +11,6 @@ const AREAS = {
     27: { name: 'Cámara de Congelación',   min: -20, max: -15 }
 };
 
-// Devuelve clases Tailwind de color según temperatura vs rango ideal
-function getTempColorClass(value, block) {
-    const area = AREAS[block] || AREAS[1];
-    if (value === null || value === undefined) return 'bg-slate-300';
-    if (value < area.min) return 'bg-blue-500';       // Frío / bajo
-    if (value > area.max) return 'bg-sanbornsRed';    // Caliente / alto
-    return 'bg-green-500';                            // Dentro del rango
-}
-
 let currentBlock = 1;
 let lastRefreshDetail = null;
 
@@ -120,8 +111,6 @@ function updateTemperaturaDashboard(data) {
 
     // Color dinámico según rango ideal del bloque
     const area = AREAS[currentBlock] || AREAS[1];
-    const colorClass = getTempColorClass(avg, currentBlock);
-
     // Barra de rango — usa rangos ideales del bloque como referencia
     const progressBar = document.getElementById('tempProgressBar');
     const tempBarLabel = document.getElementById('tempBarLabel');
@@ -132,9 +121,7 @@ function updateTemperaturaDashboard(data) {
         const pct = Math.min(100, Math.max(0, ((avg - refMin) / (refMax - refMin)) * 100));
         progressBar.style.width = `${pct}%`;
         progressBar.textContent = `${avg}°C`;
-        // Cambiar color de la barra según estado
-        progressBar.className = progressBar.className.replace(/bg-\S+/g, '').trim();
-        progressBar.classList.add(colorClass, 'h-full', 'rounded-full', 'transition-all', 'duration-500', 'flex', 'items-center', 'justify-center', 'text-white', 'text-xs', 'font-bold');
+        window.applyProgressBarThresholdColor(progressBar, pct);
         if (tempBarLabel) tempBarLabel.textContent = `${avg}°C`;
         const refMinEl = document.getElementById('tempRefMin');
         const refMaxEl = document.getElementById('tempRefMax');
@@ -170,6 +157,21 @@ function clearTemperaturaCharts() {
     setEl('tempKpiMax', '--');
     setEl('tempKpiMin', '--');
     setEl('tempKpiAvg', '--');
+    setEl('tempKpiAvgChart', '--');
+    setEl('tempBarLabel', '--°C');
+    setEl('tempRefMin', '-- (Mín)');
+    setEl('tempRefMax', '-- (Máx)');
+
+    const progressBar = document.getElementById('tempProgressBar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '--';
+        window.applyProgressBarThresholdColor(progressBar, 0);
+    }
+
+    const statusEl = document.getElementById('tempRangeStatus');
+    if (statusEl) statusEl.textContent = '';
+
     if (charts.temperatura) {
         charts.temperatura.data.labels = [];
         charts.temperatura.data.datasets[0].data = [];

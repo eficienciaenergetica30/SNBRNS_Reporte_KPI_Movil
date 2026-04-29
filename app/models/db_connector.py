@@ -126,22 +126,43 @@ def _get_db_auth_mode():
     return mode if mode in {"technical", "derived", "auto"} else "technical"
 
 
-def _extract_email_from_request():
-    if not has_request_context():
-        return ''
+def get_local_user_identity():
+    local_email = (os.getenv('APP_LOCAL_USER_EMAIL') or os.getenv('LOCAL_EMAIL') or '').strip()
+    local_name = (os.getenv('APP_LOCAL_USER_NAME') or '').strip()
+    local_id = (os.getenv('APP_LOCAL_USER_ID') or '').strip()
 
-    email = (request.headers.get('x-sap-user-email') or '').strip()
-    if email:
-        return email
+    if not (local_id or local_name or local_email):
+        return None
 
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.lower().startswith('bearer '):
-        token = auth_header[7:].strip()
-        payload = _decode_jwt_payload(token)
-        if payload:
-            return str(payload.get('email') or payload.get('mail') or '').strip()
+    return {
+        'id': local_id,
+        'full_name': local_name,
+        'email': local_email,
+    }
+
+
+def extract_request_email():
+    if has_request_context():
+        email = (request.headers.get('x-sap-user-email') or '').strip()
+        if email:
+            return email
+
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.lower().startswith('bearer '):
+            token = auth_header[7:].strip()
+            payload = _decode_jwt_payload(token)
+            if payload:
+                token_email = str(payload.get('email') or payload.get('mail') or '').strip()
+                if token_email:
+                    return token_email
+
+    local_identity = get_local_user_identity()
+    if local_identity:
+        return str(local_identity.get('email') or '').strip()
 
     return ''
+
+
 def _resolve_effective_user(base_user, requested_user=''):
     mode = _get_db_auth_mode()
 
@@ -189,10 +210,10 @@ def get_db_connection(db_user='', db_password='', force_technical=False):
         auth_mode = 'final-user-explicit'
     else:
         # Conexión por defecto: resolver usuario por correo del request y tabla de roles.
-        email = _extract_email_from_request().strip().lower()
+        email = extract_request_email().strip().lower()
         client_password = (os.getenv('HANA_CLIENT_PWD') or '').strip()
         if not email:
-            print("[WARN get_db_connection] No se pudo resolver correo desde request para conexion de usuario final")
+            print("[WARN get_db_connection] No se pudo resolver correo desde request ni entorno local para conexion de usuario final")
             return None
         if not client_password:
             print("[WARN get_db_connection] HANA_CLIENT_PWD no configurado para conexion de usuario final")

@@ -55,8 +55,7 @@ function setWaterNoDataState() {
     if (progressBar) {
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
-        progressBar.classList.remove('bg-red-600', 'animate-pulse');
-        progressBar.classList.add('bg-blue-500');
+        window.applyProgressBarThresholdColor(progressBar, 0);
     }
     if (progressActual) {
         progressActual.textContent = '0';
@@ -109,10 +108,14 @@ function updateWaterDashboard(water) {
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
+            const progressVisuals = window.getProgressThresholdVisuals(target > 0 ? (actual / target) * 100 : 0);
+            const remainingColor = window.getProgressRemainingChartColor();
             
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
             charts.kpiDay.data.datasets[0].data = isOver ? [actual] : [actual, restante];
-            charts.kpiDay.data.datasets[0].backgroundColor = isOver ? ['#dc2626'] : ['#3b82f6', '#e2e8f0']; // Azul para agua
+            charts.kpiDay.data.datasets[0].backgroundColor = isOver
+                ? [progressVisuals.chartColor]
+                : [progressVisuals.chartColor, remainingColor];
             charts.kpiDay.update();
         }
 
@@ -129,15 +132,12 @@ function updateWaterDashboard(water) {
             const displayPct = Math.min(strictPct, 100);
             progressBar.style.width = displayPct + '%';
             progressBar.textContent = strictPct > 0 ? strictPct.toFixed(1) + '%' : '0%';
-            
+            window.applyProgressBarThresholdColor(progressBar, strictPct, strictPct > 100);
+
             if (strictPct > 100) {
-                progressBar.classList.remove('bg-blue-500');
-                progressBar.classList.add('bg-red-600', 'animate-pulse');
                 progressActual.classList.add('text-red-600');
                 progressActual.classList.remove('text-blue-500');
             } else {
-                progressBar.classList.add('bg-blue-500');
-                progressBar.classList.remove('bg-red-600', 'animate-pulse');
                 progressActual.classList.remove('text-red-600');
                 progressActual.classList.add('text-blue-500');
             }
@@ -179,6 +179,8 @@ function initWaterCharts() {
 
     const blueWater = '#3b82f6';
     const grayTarget = '#656263';
+    const initialDonutColor = window.getProgressThresholdVisuals(0).chartColor;
+    const remainingColor = window.getProgressRemainingChartColor();
 
     // Gráfica de Consumo (Líneas)
     const ctx = document.getElementById('chartLineAgua');
@@ -230,7 +232,7 @@ function initWaterCharts() {
                 labels: ['Consumo Actual', 'Restante'],
                 datasets: [{
                     data: [0, 100],
-                    backgroundColor: [blueWater, '#e2e8f0'],
+                    backgroundColor: [initialDonutColor, remainingColor],
                     borderWidth: 0,
                     cutout: '75%'
                 }]
