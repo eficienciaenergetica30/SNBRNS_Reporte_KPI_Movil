@@ -44,6 +44,26 @@ Configuracion recomendada:
 - Local/.env: `DB_AUTH_MODE=technical`
 - Cloud Foundry (Work Zone): `DB_AUTH_MODE=derived`
 
+### Correo local para desarrollo
+
+Si en local no llega el correo desde Launchpad o desde el token, puedes definirlo en `.env` para que la app siga el flujo normal de roles y acceso a datos usando ese correo.
+
+Variables soportadas:
+
+- `LOCAL_EMAIL=<correo>`
+- `APP_LOCAL_USER_EMAIL=<correo>`
+
+La prioridad local es:
+
+1. `APP_LOCAL_USER_EMAIL`
+2. `LOCAL_EMAIL`
+
+Recomendacion:
+
+- Usa solo una de las dos variables.
+- Para desactivar el comportamiento local, elimina o deja vacia la variable.
+- El correo configurado debe existir en la tabla de roles; si no existe, la app seguira bloqueando el acceso como hoy.
+
 Ejemplo en CF:
 
 ```bash
@@ -80,6 +100,8 @@ Respuesta esperada (fuera de launchpad):
 - `authenticated: false`
 - `source: anonymous` o `source: local`
 - `label: Usuario no identificado` (si no hay variables locales)
+
+Con `LOCAL_EMAIL` o `APP_LOCAL_USER_EMAIL` configurado en local, la respuesta debe incluir `source: local` y el correo resuelto en `email`.
 
 ## 7) Integracion con Work Zone
 

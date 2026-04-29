@@ -64,8 +64,7 @@ function setEnergyNoDataState() {
     if (progressBar) {
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
-        progressBar.classList.remove('bg-red-600', 'animate-pulse');
-        progressBar.classList.add('bg-sanbornsRed');
+        window.applyProgressBarThresholdColor(progressBar, 0);
     }
     if (progressActual) progressActual.textContent = '0';
     if (progressTarget) progressTarget.textContent = '0';
@@ -139,10 +138,14 @@ function updateEnergyDashboard(energy) {
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
+            const progressVisuals = window.getProgressThresholdVisuals(target > 0 ? (actual / target) * 100 : 0);
+            const remainingColor = window.getProgressRemainingChartColor();
 
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
             charts.kpiDay.data.datasets[0].data = isOver ? [actual] : [actual, restante];
-            charts.kpiDay.data.datasets[0].backgroundColor = isOver ? ['#dc2626'] : ['#d91920', '#e2e8f0'];
+            charts.kpiDay.data.datasets[0].backgroundColor = isOver
+                ? [progressVisuals.chartColor]
+                : [progressVisuals.chartColor, remainingColor];
             charts.kpiDay.update();
         }
 
@@ -159,14 +162,11 @@ function updateEnergyDashboard(energy) {
             const displayPct = Math.min(strictPct, 100);
             progressBar.style.width = displayPct + '%';
             progressBar.textContent = strictPct > 0 ? strictPct.toFixed(1) + '%' : '0%';
+            window.applyProgressBarThresholdColor(progressBar, strictPct, strictPct > 100);
 
             if (strictPct > 100) {
-                progressBar.classList.remove('bg-sanbornsRed');
-                progressBar.classList.add('bg-red-600', 'animate-pulse');
                 progressActual.classList.add('text-red-600');
             } else {
-                progressBar.classList.add('bg-sanbornsRed');
-                progressBar.classList.remove('bg-red-600', 'animate-pulse');
                 progressActual.classList.remove('text-red-600');
             }
         }
@@ -207,6 +207,8 @@ function initEnergyCharts() {
 
     const sanbornsRed = '#d91920';
     const sanbornsGray = '#656263';
+    const initialDonutColor = window.getProgressThresholdVisuals(0).chartColor;
+    const remainingColor = window.getProgressRemainingChartColor();
 
     // Gráfica de Consumo (Líneas)
     const ctx = document.getElementById('chartEnergy');
@@ -258,7 +260,7 @@ function initEnergyCharts() {
                 labels: ['Consumo Actual', 'Restante'],
                 datasets: [{
                     data: [0, 100],
-                    backgroundColor: [sanbornsRed, '#e2e8f0'],
+                    backgroundColor: [initialDonutColor, remainingColor],
                     borderWidth: 0,
                     cutout: '75%'
                 }]

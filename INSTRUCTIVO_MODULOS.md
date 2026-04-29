@@ -90,6 +90,12 @@ El archivo `.html` de tu módulo NO debe contener la estructura entera (`<head>`
 ### 2.2 Lógica Independiente (`app/static/js/agua.js`)
 No debes preocuparte por programar los calendarios ni los buscadores. El archivo global (`core.js`) ya controla todo eso y simplemente le "avisará" a tu archivo de agua cada que el gerente busque una tienda.
 
+Adicionalmente, la selección del sitio ahora se conserva durante la sesión del navegador aunque el usuario cambie entre dashboards. Ese estado global solo se limpia cuando el usuario borra explícitamente el filtro.
+
+La validación inicial de acceso (`bootstrap-context`) también se reutiliza durante la misma sesión después de una entrada exitosa, para evitar revalidar en cada cambio de dashboard.
+
+Los umbrales y colores de las barras de progreso y de las gráficas de dona también quedaron centralizados en `app/static/js/rbac-config.js`, dentro de `FRONTEND_UI_CONFIG.progressBars`. Si después cambia la regla de negocio, basta con ajustar `greenMax` y `yellowMax` en ese archivo para que todos los dashboards adopten los nuevos rangos sin tocar la lógica individual.
+
 Lo único que debes hacer en tu nuevo `agua.js` es **escuchar el evento global** (`DashboardRefreshRequired`) y pedir los datos a tu API:
 
 ```javascript
