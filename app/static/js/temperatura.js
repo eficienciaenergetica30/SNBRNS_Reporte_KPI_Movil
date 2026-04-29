@@ -15,6 +15,8 @@ let currentBlock = 1;
 let lastRefreshDetail = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    const titleEl = document.getElementById('dashboardTitle');
+    if (titleEl) titleEl.textContent = 'Dashboard de Temperatura';
     initTemperaturaCharts();
     // Marcar el botón activo inicial sin disparar petición
     [1, 2, 3, 13, 27].forEach(b => {
@@ -222,7 +224,7 @@ function initTemperaturaCharts() {
                         beginAtZero: false,
                         grid: { color: 'rgba(148, 163, 184, 0.1)' },
                         ticks: {
-                            callback: val => `${val}°C`
+                            callback: val => `${(+val).toFixed(1)}°C`
                         }
                     },
                     x: {
@@ -236,7 +238,7 @@ function initTemperaturaCharts() {
                     },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.formattedValue}°C`
+                            label: ctx => `${(+ctx.parsed.y).toFixed(1)}°C`
                         }
                     }
                 },

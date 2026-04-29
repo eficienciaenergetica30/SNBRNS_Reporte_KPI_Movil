@@ -3,6 +3,8 @@
 const charts = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    const titleEl = document.getElementById('dashboardTitle');
+    if (titleEl) titleEl.textContent = 'Dashboard de Gas';
     initGasCharts();
 });
 

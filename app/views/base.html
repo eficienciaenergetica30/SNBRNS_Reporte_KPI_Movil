@@ -282,6 +282,11 @@
                 </div>
             </div>
 
+            <!-- TÍTULO DEL DASHBOARD (siempre visible) -->
+            <div class="px-4 pt-4 max-w-6xl mx-auto w-full">
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-white" id="dashboardTitle"></h2>
+            </div>
+
             <!-- ESTADO VACÍO (Fondo tenue) -->
             <div id="emptyState"
                 class="flex-1 flex items-center justify-center py-20 px-8 opacity-[0.1] dark:opacity-10 pointer-events-none transition-opacity duration-1000">
@@ -291,10 +296,7 @@
 
             <!-- MAIN DASHBOARD (Contenido Dinámico de los Hijos) -->
             <main class="p-4 space-y-8 max-w-6xl mx-auto hidden" id="dashboardMain">
-                <h2 class="text-2xl font-bold mb-2 text-slate-800 dark:text-white" id="dashboardTitle"></h2>
-
                 {% block content %}{% endblock %}
-
             </main>
         </div> <!-- End Main Content -->
     </div> <!-- End Flex wrapper -->
