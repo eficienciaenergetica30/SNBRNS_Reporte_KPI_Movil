@@ -3,15 +3,17 @@
 const charts = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    const titleEl = document.getElementById('dashboardTitle');
+    if (titleEl) titleEl.textContent = 'Dashboard Eléctrico';
     initEnergyCharts();
 });
 
 // ESCUCHAMOS EL EVENTO DESDE CORE.JS
 document.addEventListener('DashboardRefreshRequired', async (e) => {
-    const { costCenter, date, inputName } = e.detail;
+    const { costCenter, date, inputName, siteName } = e.detail;
 
     try {
-        const energy = await window.fetchData('/api/energy/today', costCenter, date);
+        const energy = await window.fetchData('/api/energy/today', costCenter, date, siteName);
 
         const validSiteName = (energy && energy.site_name && energy.site_name !== 'Sitio Desconocido')
             ? energy.site_name
@@ -54,6 +56,7 @@ function setEnergyNoDataState() {
     setEl('masterKpiPfMaxTime', '-');
     setEl('masterKpiPfMinTime', '-');
     setEl('kpiEnergy', '0 kWh');
+    window.applyThresholdKpiCardStyles(document.getElementById('energyComplianceCard'), 0);
 
     const progressBar = document.getElementById('progressBar');
     const progressActual = document.getElementById('progressActual');
@@ -62,8 +65,7 @@ function setEnergyNoDataState() {
     if (progressBar) {
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
-        progressBar.classList.remove('bg-red-600', 'animate-pulse');
-        progressBar.classList.add('bg-sanbornsRed');
+        window.applyProgressBarThresholdColor(progressBar, 0);
     }
     if (progressActual) progressActual.textContent = '0';
     if (progressTarget) progressTarget.textContent = '0';
@@ -93,7 +95,8 @@ function updateEnergyDashboard(energy) {
     if (energy.kpi) {
         const actual = energy.kpi.actual || 0;
         const target = energy.kpi.target || 0;
-        const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
+        const strictPct = target > 0 ? (actual / target) * 100 : 0;
+        const pct = Math.round(strictPct);
 
         const maxFd = { maximumFractionDigits: 2 };
 
@@ -114,8 +117,8 @@ function updateEnergyDashboard(energy) {
         const pctEl = document.getElementById('masterKpiPct');
         if (pctEl) {
             pctEl.textContent = pct;
-            pctEl.parentElement.className = `text-4xl font-light ${pct >= 100 ? 'text-red-500' : 'text-sanbornsRed'}`;
         }
+        window.applyThresholdKpiCardStyles(document.getElementById('energyComplianceCard'), strictPct);
 
         if (energy.power_factor) {
             const formatTime = (timeStr) => {
@@ -137,15 +140,18 @@ function updateEnergyDashboard(energy) {
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
+            const progressVisuals = window.getProgressThresholdVisuals(strictPct);
+            const remainingColor = window.getProgressRemainingChartColor();
 
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
             charts.kpiDay.data.datasets[0].data = isOver ? [actual] : [actual, restante];
-            charts.kpiDay.data.datasets[0].backgroundColor = isOver ? ['#dc2626'] : ['#d91920', '#e2e8f0'];
+            charts.kpiDay.data.datasets[0].backgroundColor = isOver
+                ? [progressVisuals.chartColor]
+                : [progressVisuals.chartColor, remainingColor];
             charts.kpiDay.update();
         }
 
         // Barra de progreso
-        const strictPct = target > 0 ? (actual / target) * 100 : 0;
         const progressActual = document.getElementById('progressActual');
         const progressTarget = document.getElementById('progressTarget');
         const progressBar = document.getElementById('progressBar');
@@ -157,14 +163,11 @@ function updateEnergyDashboard(energy) {
             const displayPct = Math.min(strictPct, 100);
             progressBar.style.width = displayPct + '%';
             progressBar.textContent = strictPct > 0 ? strictPct.toFixed(1) + '%' : '0%';
+            window.applyProgressBarThresholdColor(progressBar, strictPct, strictPct > 100);
 
             if (strictPct > 100) {
-                progressBar.classList.remove('bg-sanbornsRed');
-                progressBar.classList.add('bg-red-600', 'animate-pulse');
                 progressActual.classList.add('text-red-600');
             } else {
-                progressBar.classList.add('bg-sanbornsRed');
-                progressBar.classList.remove('bg-red-600', 'animate-pulse');
                 progressActual.classList.remove('text-red-600');
             }
         }
@@ -205,6 +208,8 @@ function initEnergyCharts() {
 
     const sanbornsRed = '#d91920';
     const sanbornsGray = '#656263';
+    const initialDonutColor = window.getProgressThresholdVisuals(0).chartColor;
+    const remainingColor = window.getProgressRemainingChartColor();
 
     // Gráfica de Consumo (Líneas)
     const ctx = document.getElementById('chartEnergy');
@@ -256,7 +261,7 @@ function initEnergyCharts() {
                 labels: ['Consumo Actual', 'Restante'],
                 datasets: [{
                     data: [0, 100],
-                    backgroundColor: [sanbornsRed, '#e2e8f0'],
+                    backgroundColor: [initialDonutColor, remainingColor],
                     borderWidth: 0,
                     cutout: '75%'
                 }]

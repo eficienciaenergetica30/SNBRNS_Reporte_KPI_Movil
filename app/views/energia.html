@@ -24,7 +24,7 @@
                 <p class="text-xs text-slate-500 mt-1">kWh</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-darkBg" id="masterKpiActual">0</p>
+                <p class="text-4xl font-light text-slate-800 dark:text-white" id="masterKpiActual">0</p>
                 <p class="text-xs text-slate-500 mt-2">kWh consumidos</p>
             </div>
         </div>
@@ -69,16 +69,16 @@
         </div>
 
         <!-- Cumplimiento -->
-        <div
+        <div id="energyComplianceCard"
             class="min-w-[160px] bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 snap-start">
             <div>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
-                <p class="text-xs text-slate-500 mt-1">%</p>
+                <p data-threshold-card-title class="text-sm font-bold text-slate-800 dark:text-slate-100">Cumplimiento</p>
+                <p data-threshold-card-muted class="text-xs text-slate-500 mt-1">%</p>
             </div>
             <div class="mt-8">
-                <p class="text-4xl font-light text-slate-800 dark:text-white"><span id="masterKpiPct">0</span><span
-                        class="text-xl text-slate-500">%</span></p>
-                <p class="text-xs text-slate-500 mt-2">Progreso del día</p>
+                <p data-threshold-card-value class="text-4xl font-light text-slate-800 dark:text-white"><span id="masterKpiPct">0</span><span
+                        data-threshold-card-muted class="text-xl text-slate-500">%</span></p>
+                <p data-threshold-card-muted class="text-xs text-slate-500 mt-2">Progreso del día</p>
             </div>
         </div>
 
@@ -167,7 +167,7 @@
 
         <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-8 overflow-hidden shadow-inner">
             <div id="progressBar"
-                class="bg-sanbornsRed h-8 rounded-full text-sm flex items-center justify-center text-white font-bold transition-all duration-1000 w-0">
+                class="bg-green-500 h-8 rounded-full text-sm flex items-center justify-center text-white font-bold transition-all duration-1000 w-0">
                 0%</div>
         </div>
         <p class="text-xs text-slate-500 mt-4 text-center">Cuando la barra se llena al 100%, el consumo

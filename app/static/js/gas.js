@@ -3,14 +3,16 @@
 const charts = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    const titleEl = document.getElementById('dashboardTitle');
+    if (titleEl) titleEl.textContent = 'Dashboard de Gas';
     initGasCharts();
 });
 
 document.addEventListener('DashboardRefreshRequired', async (e) => {
-    const { costCenter, date, inputName } = e.detail;
+    const { costCenter, date, inputName, siteName } = e.detail;
     window.showLoading(true);
     try {
-        const gasData = await window.fetchData('/api/gas', costCenter, date);
+        const gasData = await window.fetchData('/api/gas', costCenter, date, siteName);
 
         const validSiteName = (gasData && gasData.site_name) 
                                 ? gasData.site_name 
@@ -48,6 +50,7 @@ function setGasNoDataState() {
     setEl('masterKpiCosto', '0');
     setEl('masterKpiPrecio', '0');
     setEl('kpiGas', '0 m³');
+    window.applyThresholdKpiCardStyles(document.getElementById('gasComplianceCard'), 0);
 
     const progressBar = document.getElementById('progressBar');
     const progressActual = document.getElementById('progressActual');
@@ -56,8 +59,7 @@ function setGasNoDataState() {
     if (progressBar) {
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
-        progressBar.classList.remove('bg-red-600', 'animate-pulse');
-        progressBar.classList.add('bg-blue-500');
+        window.applyProgressBarThresholdColor(progressBar, 0);
     }
     if (progressActual) progressActual.textContent = '0';
     if (progressTarget) progressTarget.textContent = '0';
@@ -90,11 +92,12 @@ function updateGasDashboard(data) {
     const costoEstimado = data.kpi.costo_estimado || 0;
     const precioUnitario = data.kpi.precio_unitario || 0;
 
-        setEl('masterKpiActual', totalConsumo.toFixed(2));
-        setEl('masterKpiTarget', totalObjetivo.toFixed(2));
-        setEl('masterKpiPct', cumplimiento.toFixed(0));
-        setEl('masterKpiCosto', costoEstimado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
-        setEl('masterKpiPrecio', precioUnitario.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    setEl('masterKpiActual', totalConsumo.toFixed(2));
+    setEl('masterKpiTarget', totalObjetivo.toFixed(2));
+    setEl('masterKpiPct', cumplimiento.toFixed(0));
+    setEl('masterKpiCosto', costoEstimado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    setEl('masterKpiPrecio', precioUnitario.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    window.applyThresholdKpiCardStyles(document.getElementById('gasComplianceCard'), cumplimiento);
 
     setEl('progressActual', totalConsumo.toFixed(2));
     setEl('progressTarget', totalObjetivo.toFixed(2));
@@ -103,11 +106,19 @@ function updateGasDashboard(data) {
         const progressPercentage = Math.min(100, cumplimiento);
         progressBar.style.width = `${progressPercentage}%`;
         progressBar.textContent = `${progressPercentage.toFixed(0)}%`;
+        window.applyProgressBarThresholdColor(progressBar, cumplimiento, cumplimiento > 100);
     }
 
     if (charts.kpiDay) {
         const remaining = Math.max(0, totalObjetivo - totalConsumo);
-        charts.kpiDay.data.datasets[0].data = [totalConsumo, remaining];
+        const isOver = totalConsumo > totalObjetivo && totalObjetivo > 0;
+        const progressVisuals = window.getProgressThresholdVisuals(cumplimiento);
+        const remainingColor = window.getProgressRemainingChartColor();
+        charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
+        charts.kpiDay.data.datasets[0].data = isOver ? [totalConsumo] : [totalConsumo, remaining];
+        charts.kpiDay.data.datasets[0].backgroundColor = isOver
+            ? [progressVisuals.chartColor]
+            : [progressVisuals.chartColor, remainingColor];
         charts.kpiDay.update();
     }
 
@@ -143,6 +154,8 @@ function initGasCharts() {
     const orangeGas = '#e8743b';
     const orangeGasBg = 'rgba(232, 116, 59, 0.2)';
     const greyColor = '#656263'; // Color para 'Restante' y leyendas
+    const initialDonutColor = window.getProgressThresholdVisuals(0).chartColor;
+    const remainingColor = window.getProgressRemainingChartColor();
 
     const ctxKpiDay = document.getElementById('chartKpiDay');
     if (ctxKpiDay) {
@@ -152,7 +165,7 @@ function initGasCharts() {
                 labels: ['Actual', 'Restante'],
                 datasets: [{
                     data: [0, 100],
-                    backgroundColor: [orangeGas, '#e2e8f0'], // Naranja y un gris claro
+                    backgroundColor: [initialDonutColor, remainingColor],
                     borderWidth: 0,
                     cutout: '75%'
                 }]

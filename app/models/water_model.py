@@ -1,7 +1,7 @@
 import os
 from app.models.db_connector import get_db_connection
 
-def get_water_data(costcenter, date):
+def get_water_data(costcenter, date, sitename=''):
     """
     Lógica de base de datos dedicada 100% al módulo de Agua.
     """
@@ -14,24 +14,39 @@ def get_water_data(costcenter, date):
 
     try:
         cursor = conn.cursor()
+        normalized_sitename = (sitename or '').strip()
         
         # 1. Obtener Nombre del Sitio
-        site_name_query = f'SELECT TOP 1 "SITE_NAME" FROM "{schema}"."{view}" WHERE "COSTCENTER" = ?'
-        cursor.execute(site_name_query, (costcenter,))
+        if normalized_sitename:
+            site_name_query = f'SELECT TOP 1 "SITE_NAME" FROM "{schema}"."{view}" WHERE "COSTCENTER" = ? AND "SITE_NAME" = ?'
+            cursor.execute(site_name_query, (costcenter, normalized_sitename))
+        else:
+            site_name_query = f'SELECT TOP 1 "SITE_NAME" FROM "{schema}"."{view}" WHERE "COSTCENTER" = ?'
+            cursor.execute(site_name_query, (costcenter,))
         row = cursor.fetchone()
-        site_name = row[0] if row else "Sitio Desconocido"
+        site_name = row[0] if row else (normalized_sitename or "Sitio Desconocido")
 
         data = {"site_name": site_name, "kpi": {}, "hourly": []}
 
         # KPI
-        kpi_query = f'''
-            SELECT 
-                IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
-                IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
-            FROM "{schema}"."{view}"
-            WHERE "DATE" = ? AND "COSTCENTER" = ?
-        '''
-        cursor.execute(kpi_query, (date, costcenter))
+        if normalized_sitename:
+            kpi_query = f'''
+                SELECT 
+                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                FROM "{schema}"."{view}"
+                WHERE "DATE" = ? AND "COSTCENTER" = ? AND "SITE_NAME" = ?
+            '''
+            cursor.execute(kpi_query, (date, costcenter, normalized_sitename))
+        else:
+            kpi_query = f'''
+                SELECT 
+                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                FROM "{schema}"."{view}"
+                WHERE "DATE" = ? AND "COSTCENTER" = ?
+            '''
+            cursor.execute(kpi_query, (date, costcenter))
         kpi_row = cursor.fetchone()
         if kpi_row:
             data["kpi"] = {
@@ -40,17 +55,30 @@ def get_water_data(costcenter, date):
             }
 
         # Hourly
-        hourly_query = f'''
-            SELECT 
-                "HOUR",
-                IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
-                IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
-            FROM "{schema}"."{view}"
-            WHERE "DATE" = ? AND "COSTCENTER" = ?
-            GROUP BY "HOUR"
-            ORDER BY "HOUR" ASC
-        '''
-        cursor.execute(hourly_query, (date, costcenter))
+        if normalized_sitename:
+            hourly_query = f'''
+                SELECT 
+                    "HOUR",
+                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                FROM "{schema}"."{view}"
+                WHERE "DATE" = ? AND "COSTCENTER" = ? AND "SITE_NAME" = ?
+                GROUP BY "HOUR"
+                ORDER BY "HOUR" ASC
+            '''
+            cursor.execute(hourly_query, (date, costcenter, normalized_sitename))
+        else:
+            hourly_query = f'''
+                SELECT 
+                    "HOUR",
+                    IFNULL(SUM("CONSUMPTION"), 0) AS "ACTUAL",
+                    IFNULL(SUM("CONSUMPTION_AVG"), 0) AS "TARGET"
+                FROM "{schema}"."{view}"
+                WHERE "DATE" = ? AND "COSTCENTER" = ?
+                GROUP BY "HOUR"
+                ORDER BY "HOUR" ASC
+            '''
+            cursor.execute(hourly_query, (date, costcenter))
         for h_row in cursor.fetchall():
             data["hourly"].append({
                 "hour": str(h_row[0]) if h_row[0] is not None else "00:00",

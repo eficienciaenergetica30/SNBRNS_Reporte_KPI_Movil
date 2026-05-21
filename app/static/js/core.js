@@ -4,6 +4,109 @@
 let allSites = [];
 window.__dbCanProceed = false;
 
+function getProgressBarConfig() {
+    const config = window.FRONTEND_UI_CONFIG && window.FRONTEND_UI_CONFIG.progressBars
+        ? window.FRONTEND_UI_CONFIG.progressBars
+        : {};
+    const thresholds = config.thresholds || {};
+    const colors = config.colors || {};
+
+    return {
+        thresholds: {
+            greenMax: Number.isFinite(thresholds.greenMax) ? thresholds.greenMax : 40,
+            yellowMax: Number.isFinite(thresholds.yellowMax) ? thresholds.yellowMax : 80,
+        },
+        colors: {
+            low: colors.low || 'bg-green-500',
+            medium: colors.medium || 'bg-yellow-400',
+            high: colors.high || 'bg-red-600',
+        },
+        chartColors: {
+            low: config.chartColors && config.chartColors.low ? config.chartColors.low : '#22c55e',
+            medium: config.chartColors && config.chartColors.medium ? config.chartColors.medium : '#facc15',
+            high: config.chartColors && config.chartColors.high ? config.chartColors.high : '#dc2626',
+            remaining: config.chartColors && config.chartColors.remaining ? config.chartColors.remaining : '#e2e8f0',
+        },
+    };
+}
+
+function getProgressThresholdLevel(strictPct) {
+    const normalizedPct = Number.isFinite(strictPct) ? strictPct : 0;
+    const progressBarConfig = getProgressBarConfig();
+
+    if (normalizedPct >= progressBarConfig.thresholds.yellowMax) {
+        return 'high';
+    }
+
+    if (normalizedPct >= progressBarConfig.thresholds.greenMax) {
+        return 'medium';
+    }
+
+    return 'low';
+}
+
+function getKpiCardConfig() {
+    const config = window.FRONTEND_UI_CONFIG && window.FRONTEND_UI_CONFIG.kpiCards
+        ? window.FRONTEND_UI_CONFIG.kpiCards
+        : {};
+    const colors = config.colors || {};
+
+    return {
+        colors: {
+            low: {
+                container: colors.low && colors.low.container
+                    ? colors.low.container
+                    : 'bg-green-50 border-green-200 dark:bg-green-500/10 dark:border-green-500/30',
+                title: colors.low && colors.low.title
+                    ? colors.low.title
+                    : 'text-green-700 dark:text-green-300',
+                value: colors.low && colors.low.value
+                    ? colors.low.value
+                    : 'text-green-700 dark:text-green-300',
+                muted: colors.low && colors.low.muted
+                    ? colors.low.muted
+                    : 'text-green-600 dark:text-green-400',
+            },
+            medium: {
+                container: colors.medium && colors.medium.container
+                    ? colors.medium.container
+                    : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-400/10 dark:border-yellow-400/30',
+                title: colors.medium && colors.medium.title
+                    ? colors.medium.title
+                    : 'text-yellow-700 dark:text-yellow-300',
+                value: colors.medium && colors.medium.value
+                    ? colors.medium.value
+                    : 'text-yellow-700 dark:text-yellow-300',
+                muted: colors.medium && colors.medium.muted
+                    ? colors.medium.muted
+                    : 'text-yellow-600 dark:text-yellow-400',
+            },
+            high: {
+                container: colors.high && colors.high.container
+                    ? colors.high.container
+                    : 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30',
+                title: colors.high && colors.high.title
+                    ? colors.high.title
+                    : 'text-red-700 dark:text-red-300',
+                value: colors.high && colors.high.value
+                    ? colors.high.value
+                    : 'text-red-700 dark:text-red-300',
+                muted: colors.high && colors.high.muted
+                    ? colors.high.muted
+                    : 'text-red-600 dark:text-red-400',
+            },
+        },
+    };
+}
+
+function getClassTokens(classNames) {
+    return (classNames || '').split(/\s+/).filter(Boolean);
+}
+
+function getUniqueClassTokens(values) {
+    return Array.from(new Set(values.flatMap((value) => getClassTokens(value))));
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const siteInput = document.getElementById('siteSearchInput');
     const dateInput = document.getElementById('datePicker');
@@ -15,6 +118,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userIdentityDerivedUser = document.getElementById('userIdentityDerivedUser');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingOverlayText = document.getElementById('loadingOverlayText');
+    const BOOTSTRAP_CONTEXT_KEY = 'bootstrapContextSession';
+    const SITE_SELECTION_KEY = 'selectedSiteSession';
+    let selectedSiteName = '';
+
+    function getSiteDisplayValue(siteName, siteId) {
+        const resolvedName = typeof siteName === 'string' ? siteName.trim() : '';
+        const resolvedId = typeof siteId === 'string' || typeof siteId === 'number'
+            ? String(siteId).trim()
+            : '';
+
+        if (resolvedName && resolvedId) {
+            return `${resolvedName} (${resolvedId})`;
+        }
+
+        return resolvedName || resolvedId;
+    }
+
+    function saveSiteSelection(siteId, siteName, inputValue) {
+        const resolvedId = typeof siteId === 'string' || typeof siteId === 'number'
+            ? String(siteId).trim()
+            : '';
+        const resolvedName = typeof siteName === 'string' ? siteName.trim() : '';
+        const resolvedInput = typeof inputValue === 'string' && inputValue.trim()
+            ? inputValue.trim()
+            : getSiteDisplayValue(resolvedName, resolvedId);
+
+        if (!resolvedId) {
+            sessionStorage.removeItem(SITE_SELECTION_KEY);
+            return;
+        }
+
+        sessionStorage.setItem(SITE_SELECTION_KEY, JSON.stringify({
+            costCenter: resolvedId,
+            siteName: resolvedName,
+            inputValue: resolvedInput,
+        }));
+    }
+
+    function getSavedSiteSelection() {
+        const rawValue = sessionStorage.getItem(SITE_SELECTION_KEY);
+        if (!rawValue) return null;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            const costCenter = parsed && parsed.costCenter ? String(parsed.costCenter).trim() : '';
+            if (!costCenter) {
+                sessionStorage.removeItem(SITE_SELECTION_KEY);
+                return null;
+            }
+
+            return {
+                costCenter,
+                siteName: parsed && parsed.siteName ? String(parsed.siteName).trim() : '',
+                inputValue: parsed && parsed.inputValue ? String(parsed.inputValue).trim() : '',
+            };
+        } catch (err) {
+            sessionStorage.removeItem(SITE_SELECTION_KEY);
+            return null;
+        }
+    }
+
+    function clearSavedSiteSelection() {
+        sessionStorage.removeItem(SITE_SELECTION_KEY);
+    }
+
+    function clearCurrentSiteSelection() {
+        if (siteInput) siteInput.value = '';
+        if (hiddenCostCenter) hiddenCostCenter.value = '';
+        selectedSiteName = '';
+
+        if (dashboardMain) dashboardMain.classList.add('hidden');
+        document.getElementById('emptyState')?.classList.remove('hidden');
+        updateClearButtonVisibility('');
+    }
+
+    function restoreSavedSiteSelection() {
+        const savedSelection = getSavedSiteSelection();
+        if (!savedSelection) {
+            return false;
+        }
+
+        const matchedSite = allSites.find(site => String(site.id).trim() === savedSelection.costCenter);
+        if (!matchedSite) {
+            clearCurrentSiteSelection();
+            return false;
+        }
+
+        const resolvedSiteName = String(matchedSite.name || savedSelection.siteName || '').trim();
+        const resolvedInputValue = savedSelection.inputValue || getSiteDisplayValue(resolvedSiteName, matchedSite.id);
+
+        if (siteInput) siteInput.value = resolvedInputValue;
+        if (hiddenCostCenter) hiddenCostCenter.value = String(matchedSite.id).trim();
+        selectedSiteName = resolvedSiteName;
+        updateClearButtonVisibility(resolvedInputValue);
+        saveSiteSelection(matchedSite.id, resolvedSiteName, resolvedInputValue);
+        return true;
+    }
 
     function showLoadingOverlay(message = 'Cargando datos del sitio...') {
         if (loadingOverlayText && message) {
@@ -67,7 +267,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function applyBootstrapContext(data) {
+        const ctx = data && data.userContext ? data.userContext : {};
+        setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
+        const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
+        const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
+        setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
+        setUserIdentityDerivedUser(dbUser);
+    }
+
+    function getSavedBootstrapContext() {
+        const rawValue = sessionStorage.getItem(BOOTSTRAP_CONTEXT_KEY);
+        if (!rawValue) return null;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            if (!parsed || parsed.canProceed !== true) {
+                sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+                return null;
+            }
+            return parsed;
+        } catch (err) {
+            sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+            return null;
+        }
+    }
+
+    function saveBootstrapContext(data) {
+        if (!data || data.canProceed !== true) {
+            sessionStorage.removeItem(BOOTSTRAP_CONTEXT_KEY);
+            return;
+        }
+
+        sessionStorage.setItem(BOOTSTRAP_CONTEXT_KEY, JSON.stringify(data));
+    }
+
     async function loadBootstrapContext() {
+        const cachedBootstrap = getSavedBootstrapContext();
+        if (cachedBootstrap) {
+            applyBootstrapContext(cachedBootstrap);
+            return cachedBootstrap;
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -83,13 +324,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const data = await response.json();
-            const ctx = data && data.userContext ? data.userContext : {};
-
-            setUserIdentityLabel(ctx && ctx.label ? ctx.label : 'Usuario no identificado');
-            const userEmail = ctx && ctx.email ? String(ctx.email).trim() : '';
-            const dbUser = ctx && ctx.dbUser ? String(ctx.dbUser).trim() : '';
-            setUserIdentitySource(userEmail || (ctx && ctx.source ? ctx.source : 'anonymous'));
-            setUserIdentityDerivedUser(dbUser);
+            applyBootstrapContext(data);
+            saveBootstrapContext(data);
             return data;
         } catch (err) {
             return null;
@@ -108,9 +344,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const minStr = fechaMinima.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
 
     if (dateInput) {
-        dateInput.value = hoyStr; // Fecha por defecto: hoy
-        dateInput.max = hoyStr;   // Prohibido seleccionar el futuro
-        dateInput.min = minStr;   // Prohibido viajar en el tiempo hace más de 4 meses
+        if (typeof window.flatpickr === 'function') {
+            window.flatpickr(dateInput, {
+                locale: window.flatpickr.l10ns.es,
+                dateFormat: 'Y-m-d',
+                defaultDate: hoyStr,
+                maxDate: hoyStr,
+                minDate: minStr,
+                allowInput: false,
+                disableMobile: true,
+                monthSelectorType: 'static',
+                onChange: function (_, dateStr) {
+                    dateInput.value = dateStr;
+                    dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+                },
+            });
+        } else {
+            dateInput.value = hoyStr; // Fecha por defecto: hoy
+            dateInput.max = hoyStr;   // Prohibido seleccionar el futuro
+            dateInput.min = minStr;   // Prohibido viajar en el tiempo hace más de 4 meses
+        }
     }
 
     // Cargar identidad de usuario con fallback seguro
@@ -235,20 +488,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Cargar Sitios Inicialmente
     await loadSitesForModule();
-
-    // 1b. Listener de navegación entre módulos (para limpiar estado y recargar sitios)
-    const navLinks = document.querySelectorAll('a[href*=\"/energia\"], a[href*=\"/agua\"], a[href*=\"/gas\"], a[href*=\"/temperatura\"]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            // Limpiar selección de sitio cuando navegas a otro módulo
-            if (siteInput) siteInput.value = '';
-            if (hiddenCostCenter) hiddenCostCenter.value = '';
-            if (dashboardMain) dashboardMain.classList.add('hidden');
-            document.getElementById('emptyState')?.classList.remove('hidden');
-            // Nota: Los sitios se recargarán automáticamente cuando DOMContentLoaded se dispare en la nueva página
-            console.log(`→ Navegando a nuevo módulo, limpiando estado...`);
-        });
-    });
+    const restoredSelection = restoreSavedSiteSelection();
+    if (restoredSelection) {
+        triggerDashboardRefresh();
+    }
 
     // --- LÓGICA DEL COMBOBOX ---
     function updateClearButtonVisibility(value) {
@@ -274,9 +517,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Si borra el texto, quitar selección
             if (e.target.value.trim() === '') {
-                hiddenCostCenter.value = '';
-                dashboardMain.classList.add('hidden');
-                document.getElementById('emptyState')?.classList.remove('hidden');
+                clearSavedSiteSelection();
+                clearCurrentSiteSelection();
             }
 
             updateClearButtonVisibility(e.target.value);
@@ -288,23 +530,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (clearBtn && siteInput) {
         clearBtn.addEventListener('click', () => {
             // Limpiar input
-            siteInput.value = '';
             siteInput.focus();
-            
-            // Limpiar selección de sitio
-            hiddenCostCenter.value = '';
-            
-            // Ocultar dashboard y mostrar empty state
-            if (dashboardMain) dashboardMain.classList.add('hidden');
-            document.getElementById('emptyState')?.classList.remove('hidden');
-            
+            clearSavedSiteSelection();
+            clearCurrentSiteSelection();
+             
             // Mostrar dropdown con lista completa
             dropdown.classList.remove('hidden');
             renderDropdown(allSites, '');
-            
-            // Ocultar botón X
-            clearBtn.classList.add('hidden');
-            
+             
             console.log('✓ Búsqueda limpiada');
         });
     }
@@ -347,9 +580,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             li.addEventListener('click', () => {
-                siteInput.value = `${site.name} (${site.id})`;
-                updateClearButtonVisibility(siteInput.value);
+                const displayValue = getSiteDisplayValue(site.name, site.id);
+                siteInput.value = displayValue;
+                updateClearButtonVisibility(displayValue);
                 hiddenCostCenter.value = site.id;
+                selectedSiteName = site.name;
+                saveSiteSelection(site.id, site.name, displayValue);
                 dropdown.classList.add('hidden');
 
                 // DISPARAR BÚSQUEDA GLOBAL
@@ -376,10 +612,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('emptyState')?.classList.add('hidden');
 
         const inputName = siteInput ? siteInput.value : costCenter;
+        const siteName = selectedSiteName || '';
 
         // Disparamos un evento custom para que 'energia.js', 'agua.js', etc, lo escuchen y procesen su propia data
         const event = new CustomEvent('DashboardRefreshRequired', {
-            detail: { costCenter, date, inputName }
+            detail: { costCenter, date, inputName, siteName }
         });
         document.dispatchEvent(event);
     }
@@ -393,18 +630,105 @@ window.showLoading = function (show) {
     else el.classList.add('hidden');
 }
 
-window.fetchData = async function (url, costCenter, date) {
+window.fetchData = async function (url, costCenter, date, siteName = '') {
     if (!window.__dbCanProceed) {
         return null;
     }
 
     try {
-        const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}`);
+        const siteNameParam = siteName ? `&sitename=${encodeURIComponent(siteName)}` : '';
+        const res = await fetch(`${url}?costcenter=${encodeURIComponent(costCenter)}&date=${encodeURIComponent(date)}${siteNameParam}`);
         if (!res.ok) return null;
         return await res.json();
     } catch (e) {
         return null;
     }
+}
+
+window.applyProgressBarThresholdColor = function (progressBar, strictPct, shouldPulse = false) {
+    if (!progressBar) return;
+
+    const progressBarConfig = getProgressBarConfig();
+    const removableColorClasses = Array.from(new Set([
+        'bg-green-500',
+        'bg-yellow-400',
+        'bg-red-600',
+        progressBarConfig.colors.low,
+        progressBarConfig.colors.medium,
+        progressBarConfig.colors.high,
+    ]));
+    const visuals = window.getProgressThresholdVisuals(strictPct);
+
+    progressBar.classList.remove(...removableColorClasses, 'animate-pulse');
+    progressBar.classList.add(visuals.barClass);
+
+    if (shouldPulse) {
+        progressBar.classList.add('animate-pulse');
+    }
+}
+
+window.getProgressThresholdVisuals = function (strictPct) {
+    const level = getProgressThresholdLevel(strictPct);
+    const progressBarConfig = getProgressBarConfig();
+
+    return {
+        level,
+        barClass: progressBarConfig.colors[level],
+        chartColor: progressBarConfig.chartColors[level],
+    };
+}
+
+window.getProgressRemainingChartColor = function () {
+    return getProgressBarConfig().chartColors.remaining;
+}
+
+window.applyThresholdKpiCardStyles = function (cardElement, strictPct) {
+    if (!cardElement) return;
+
+    const cardConfig = getKpiCardConfig();
+    const visuals = cardConfig.colors[getProgressThresholdLevel(strictPct)];
+    const removableContainerClasses = getUniqueClassTokens([
+        'bg-white dark:bg-darkCard border-slate-200 dark:border-slate-800',
+        cardConfig.colors.low.container,
+        cardConfig.colors.medium.container,
+        cardConfig.colors.high.container,
+    ]);
+    const removableTitleClasses = getUniqueClassTokens([
+        'text-slate-800 dark:text-slate-100',
+        cardConfig.colors.low.title,
+        cardConfig.colors.medium.title,
+        cardConfig.colors.high.title,
+    ]);
+    const removableValueClasses = getUniqueClassTokens([
+        'text-slate-800 dark:text-white text-sanbornsRed text-red-500',
+        cardConfig.colors.low.value,
+        cardConfig.colors.medium.value,
+        cardConfig.colors.high.value,
+    ]);
+    const removableMutedClasses = getUniqueClassTokens([
+        'text-slate-500',
+        cardConfig.colors.low.muted,
+        cardConfig.colors.medium.muted,
+        cardConfig.colors.high.muted,
+    ]);
+
+    cardElement.classList.remove(...removableContainerClasses);
+    cardElement.classList.add(...getClassTokens(visuals.container));
+
+    cardElement.querySelectorAll('[data-threshold-card-title]').forEach((element) => {
+        element.classList.remove(...removableTitleClasses);
+        element.classList.add(...getClassTokens(visuals.title));
+    });
+
+    cardElement.querySelectorAll('[data-threshold-card-value]').forEach((element) => {
+        element.classList.remove(...removableValueClasses);
+        element.classList.add(...getClassTokens(visuals.value));
+    });
+
+    cardElement.querySelectorAll('[data-threshold-card-muted]').forEach((element) => {
+        element.classList.remove(...removableMutedClasses);
+        element.classList.add(...getClassTokens(visuals.muted));
+    });
 }
 
 // --- LOGICA DE UI (TEMA OSCURO Y SIDEBAR) ---
@@ -413,6 +737,8 @@ const THEME_KEY = 'themePreference';
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Tema oscuro con persistencia
     const btn = document.getElementById('themeToggle');
+    const dateInput = document.getElementById('datePicker');
+    const openDatePickerBtn = document.getElementById('openDatePickerBtn');
 
     function applySavedTheme() {
         const savedTheme = localStorage.getItem(THEME_KEY);
@@ -435,6 +761,23 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
             saveTheme(isDark);
+        });
+    }
+
+    if (openDatePickerBtn && dateInput) {
+        openDatePickerBtn.addEventListener('click', () => {
+            if (dateInput._flatpickr) {
+                dateInput._flatpickr.open();
+                return;
+            }
+
+            if (typeof dateInput.showPicker === 'function') {
+                dateInput.showPicker();
+                return;
+            }
+
+            dateInput.focus();
+            dateInput.click();
         });
     }
 

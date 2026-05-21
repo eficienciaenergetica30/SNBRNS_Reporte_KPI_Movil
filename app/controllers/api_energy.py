@@ -8,10 +8,11 @@ api_energy_bp = Blueprint('api_energy', __name__)
 def energy_today():
     costcenter = request.args.get('costcenter')
     date = request.args.get('date', datetime.date.today().isoformat())
+    sitename = request.args.get('sitename', '').strip()
     if not costcenter:
         return jsonify({"error": "Falta parametro costcenter"}), 400
         
-    data = get_energy_data(costcenter, date)
+    data = get_energy_data(costcenter, date, sitename)
     if data is None:
         return jsonify({"error": "Error interno"}), 500
 

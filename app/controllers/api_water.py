@@ -8,10 +8,11 @@ api_water_bp = Blueprint('api_water', __name__)
 def water_today():
     costcenter = request.args.get('costcenter')
     date = request.args.get('date', datetime.date.today().isoformat())
+    sitename = request.args.get('sitename', '').strip()
     if not costcenter:
         return jsonify({"error": "Falta parametro costcenter"}), 400
         
-    data = get_water_data(costcenter, date)
+    data = get_water_data(costcenter, date, sitename)
     return jsonify(data) if data else (jsonify({"error": "Error interno"}), 500)
 
 @api_water_bp.route('/sites/water')
