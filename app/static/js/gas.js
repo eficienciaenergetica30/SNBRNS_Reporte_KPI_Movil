@@ -50,6 +50,7 @@ function setGasNoDataState() {
     setEl('masterKpiCosto', '0');
     setEl('masterKpiPrecio', '0');
     setEl('kpiGas', '0 m³');
+    window.applyThresholdKpiCardStyles(document.getElementById('gasComplianceCard'), 0);
 
     const progressBar = document.getElementById('progressBar');
     const progressActual = document.getElementById('progressActual');
@@ -91,11 +92,12 @@ function updateGasDashboard(data) {
     const costoEstimado = data.kpi.costo_estimado || 0;
     const precioUnitario = data.kpi.precio_unitario || 0;
 
-        setEl('masterKpiActual', totalConsumo.toFixed(2));
-        setEl('masterKpiTarget', totalObjetivo.toFixed(2));
-        setEl('masterKpiPct', cumplimiento.toFixed(0));
-        setEl('masterKpiCosto', costoEstimado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
-        setEl('masterKpiPrecio', precioUnitario.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    setEl('masterKpiActual', totalConsumo.toFixed(2));
+    setEl('masterKpiTarget', totalObjetivo.toFixed(2));
+    setEl('masterKpiPct', cumplimiento.toFixed(0));
+    setEl('masterKpiCosto', costoEstimado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    setEl('masterKpiPrecio', precioUnitario.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }));
+    window.applyThresholdKpiCardStyles(document.getElementById('gasComplianceCard'), cumplimiento);
 
     setEl('progressActual', totalConsumo.toFixed(2));
     setEl('progressTarget', totalObjetivo.toFixed(2));

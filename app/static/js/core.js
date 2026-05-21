@@ -30,6 +30,83 @@ function getProgressBarConfig() {
     };
 }
 
+function getProgressThresholdLevel(strictPct) {
+    const normalizedPct = Number.isFinite(strictPct) ? strictPct : 0;
+    const progressBarConfig = getProgressBarConfig();
+
+    if (normalizedPct >= progressBarConfig.thresholds.yellowMax) {
+        return 'high';
+    }
+
+    if (normalizedPct >= progressBarConfig.thresholds.greenMax) {
+        return 'medium';
+    }
+
+    return 'low';
+}
+
+function getKpiCardConfig() {
+    const config = window.FRONTEND_UI_CONFIG && window.FRONTEND_UI_CONFIG.kpiCards
+        ? window.FRONTEND_UI_CONFIG.kpiCards
+        : {};
+    const colors = config.colors || {};
+
+    return {
+        colors: {
+            low: {
+                container: colors.low && colors.low.container
+                    ? colors.low.container
+                    : 'bg-green-50 border-green-200 dark:bg-green-500/10 dark:border-green-500/30',
+                title: colors.low && colors.low.title
+                    ? colors.low.title
+                    : 'text-green-700 dark:text-green-300',
+                value: colors.low && colors.low.value
+                    ? colors.low.value
+                    : 'text-green-700 dark:text-green-300',
+                muted: colors.low && colors.low.muted
+                    ? colors.low.muted
+                    : 'text-green-600 dark:text-green-400',
+            },
+            medium: {
+                container: colors.medium && colors.medium.container
+                    ? colors.medium.container
+                    : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-400/10 dark:border-yellow-400/30',
+                title: colors.medium && colors.medium.title
+                    ? colors.medium.title
+                    : 'text-yellow-700 dark:text-yellow-300',
+                value: colors.medium && colors.medium.value
+                    ? colors.medium.value
+                    : 'text-yellow-700 dark:text-yellow-300',
+                muted: colors.medium && colors.medium.muted
+                    ? colors.medium.muted
+                    : 'text-yellow-600 dark:text-yellow-400',
+            },
+            high: {
+                container: colors.high && colors.high.container
+                    ? colors.high.container
+                    : 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30',
+                title: colors.high && colors.high.title
+                    ? colors.high.title
+                    : 'text-red-700 dark:text-red-300',
+                value: colors.high && colors.high.value
+                    ? colors.high.value
+                    : 'text-red-700 dark:text-red-300',
+                muted: colors.high && colors.high.muted
+                    ? colors.high.muted
+                    : 'text-red-600 dark:text-red-400',
+            },
+        },
+    };
+}
+
+function getClassTokens(classNames) {
+    return (classNames || '').split(/\s+/).filter(Boolean);
+}
+
+function getUniqueClassTokens(values) {
+    return Array.from(new Set(values.flatMap((value) => getClassTokens(value))));
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const siteInput = document.getElementById('siteSearchInput');
     const dateInput = document.getElementById('datePicker');
@@ -591,31 +668,67 @@ window.applyProgressBarThresholdColor = function (progressBar, strictPct, should
 }
 
 window.getProgressThresholdVisuals = function (strictPct) {
-    const normalizedPct = Number.isFinite(strictPct) ? strictPct : 0;
+    const level = getProgressThresholdLevel(strictPct);
     const progressBarConfig = getProgressBarConfig();
 
-    if (normalizedPct > progressBarConfig.thresholds.yellowMax) {
-        return {
-            barClass: progressBarConfig.colors.high,
-            chartColor: progressBarConfig.chartColors.high,
-        };
-    }
-
-    if (normalizedPct > progressBarConfig.thresholds.greenMax) {
-        return {
-            barClass: progressBarConfig.colors.medium,
-            chartColor: progressBarConfig.chartColors.medium,
-        };
-    }
-
     return {
-        barClass: progressBarConfig.colors.low,
-        chartColor: progressBarConfig.chartColors.low,
+        level,
+        barClass: progressBarConfig.colors[level],
+        chartColor: progressBarConfig.chartColors[level],
     };
 }
 
 window.getProgressRemainingChartColor = function () {
     return getProgressBarConfig().chartColors.remaining;
+}
+
+window.applyThresholdKpiCardStyles = function (cardElement, strictPct) {
+    if (!cardElement) return;
+
+    const cardConfig = getKpiCardConfig();
+    const visuals = cardConfig.colors[getProgressThresholdLevel(strictPct)];
+    const removableContainerClasses = getUniqueClassTokens([
+        'bg-white dark:bg-darkCard border-slate-200 dark:border-slate-800',
+        cardConfig.colors.low.container,
+        cardConfig.colors.medium.container,
+        cardConfig.colors.high.container,
+    ]);
+    const removableTitleClasses = getUniqueClassTokens([
+        'text-slate-800 dark:text-slate-100',
+        cardConfig.colors.low.title,
+        cardConfig.colors.medium.title,
+        cardConfig.colors.high.title,
+    ]);
+    const removableValueClasses = getUniqueClassTokens([
+        'text-slate-800 dark:text-white text-sanbornsRed text-red-500',
+        cardConfig.colors.low.value,
+        cardConfig.colors.medium.value,
+        cardConfig.colors.high.value,
+    ]);
+    const removableMutedClasses = getUniqueClassTokens([
+        'text-slate-500',
+        cardConfig.colors.low.muted,
+        cardConfig.colors.medium.muted,
+        cardConfig.colors.high.muted,
+    ]);
+
+    cardElement.classList.remove(...removableContainerClasses);
+    cardElement.classList.add(...getClassTokens(visuals.container));
+
+    cardElement.querySelectorAll('[data-threshold-card-title]').forEach((element) => {
+        element.classList.remove(...removableTitleClasses);
+        element.classList.add(...getClassTokens(visuals.title));
+    });
+
+    cardElement.querySelectorAll('[data-threshold-card-value]').forEach((element) => {
+        element.classList.remove(...removableValueClasses);
+        element.classList.add(...getClassTokens(visuals.value));
+    });
+
+    cardElement.querySelectorAll('[data-threshold-card-muted]').forEach((element) => {
+        element.classList.remove(...removableMutedClasses);
+        element.classList.add(...getClassTokens(visuals.muted));
+    });
 }
 
 // --- LOGICA DE UI (TEMA OSCURO Y SIDEBAR) ---
