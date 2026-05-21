@@ -79,6 +79,25 @@ function setBlock(block) {
     }
 }
 
+function applyTemperatureProgressBarColor(progressBar, avg, area) {
+    if (!progressBar || avg === null || avg === undefined || !area) return;
+
+    // El color se determina por cumplimiento del rango ideal del bloque.
+    const warningBand = 0.5;
+    const isOutOfRange = avg < area.min || avg > area.max;
+    const isNearBoundary = !isOutOfRange && (avg <= area.min + warningBand || avg >= area.max - warningBand);
+
+    progressBar.classList.remove('bg-green-500', 'bg-yellow-400', 'bg-red-600');
+
+    if (isOutOfRange) {
+        progressBar.classList.add('bg-red-600');
+    } else if (isNearBoundary) {
+        progressBar.classList.add('bg-yellow-400');
+    } else {
+        progressBar.classList.add('bg-green-500');
+    }
+}
+
 function updateTemperaturaDashboard(data) {
     if (!data || !data.kpi) {
         clearTemperaturaCharts();
@@ -123,7 +142,7 @@ function updateTemperaturaDashboard(data) {
         const pct = Math.min(100, Math.max(0, ((avg - refMin) / (refMax - refMin)) * 100));
         progressBar.style.width = `${pct}%`;
         progressBar.textContent = `${avg}°C`;
-        window.applyProgressBarThresholdColor(progressBar, pct);
+        applyTemperatureProgressBarColor(progressBar, avg, area);
         if (tempBarLabel) tempBarLabel.textContent = `${avg}°C`;
         const refMinEl = document.getElementById('tempRefMin');
         const refMaxEl = document.getElementById('tempRefMax');
