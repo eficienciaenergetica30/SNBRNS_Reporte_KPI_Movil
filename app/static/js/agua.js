@@ -49,6 +49,7 @@ function setWaterNoDataState() {
     setEl('aguaKpiTarget', '0');
     setEl('aguaKpiPct', '0');
     setEl('aguaKpiTotalHora', '0');
+    window.applyThresholdKpiCardStyles(document.getElementById('waterComplianceCard'), 0);
 
     const progressBar = document.getElementById('pbAguaBar');
     const progressActual = document.getElementById('pbAguaActual');
@@ -93,7 +94,8 @@ function updateWaterDashboard(water) {
     if (water.kpi) {
         const actual = water.kpi.actual || 0;
         const target = water.kpi.target || 0;
-        const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
+        const strictPct = target > 0 ? (actual / target) * 100 : 0;
+        const pct = Math.round(strictPct);
 
         const maxFd = { maximumFractionDigits: 2 };
 
@@ -103,14 +105,14 @@ function updateWaterDashboard(water) {
         const pctEl = document.getElementById('aguaKpiPct');
         if (pctEl) {
             pctEl.textContent = pct;
-            pctEl.parentElement.className = `text-4xl font-light ${pct >= 100 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`;
         }
+        window.applyThresholdKpiCardStyles(document.getElementById('waterComplianceCard'), strictPct);
 
         // Widgets de Metas y Doughnut
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
-            const progressVisuals = window.getProgressThresholdVisuals(target > 0 ? (actual / target) * 100 : 0);
+            const progressVisuals = window.getProgressThresholdVisuals(strictPct);
             const remainingColor = window.getProgressRemainingChartColor();
             
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
@@ -122,7 +124,6 @@ function updateWaterDashboard(water) {
         }
 
         // Barra de progreso
-        const strictPct = target > 0 ? (actual / target) * 100 : 0;
         const progressActual = document.getElementById('pbAguaActual');
         const progressTarget = document.getElementById('pbAguaTarget');
         const progressBar = document.getElementById('pbAguaBar');

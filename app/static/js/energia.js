@@ -56,6 +56,7 @@ function setEnergyNoDataState() {
     setEl('masterKpiPfMaxTime', '-');
     setEl('masterKpiPfMinTime', '-');
     setEl('kpiEnergy', '0 kWh');
+    window.applyThresholdKpiCardStyles(document.getElementById('energyComplianceCard'), 0);
 
     const progressBar = document.getElementById('progressBar');
     const progressActual = document.getElementById('progressActual');
@@ -94,7 +95,8 @@ function updateEnergyDashboard(energy) {
     if (energy.kpi) {
         const actual = energy.kpi.actual || 0;
         const target = energy.kpi.target || 0;
-        const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
+        const strictPct = target > 0 ? (actual / target) * 100 : 0;
+        const pct = Math.round(strictPct);
 
         const maxFd = { maximumFractionDigits: 2 };
 
@@ -115,8 +117,8 @@ function updateEnergyDashboard(energy) {
         const pctEl = document.getElementById('masterKpiPct');
         if (pctEl) {
             pctEl.textContent = pct;
-            pctEl.parentElement.className = `text-4xl font-light ${pct >= 100 ? 'text-red-500' : 'text-sanbornsRed'}`;
         }
+        window.applyThresholdKpiCardStyles(document.getElementById('energyComplianceCard'), strictPct);
 
         if (energy.power_factor) {
             const formatTime = (timeStr) => {
@@ -138,7 +140,7 @@ function updateEnergyDashboard(energy) {
         if (charts.kpiDay) {
             const restante = Math.max(0, target - actual);
             const isOver = actual > target && target > 0;
-            const progressVisuals = window.getProgressThresholdVisuals(target > 0 ? (actual / target) * 100 : 0);
+            const progressVisuals = window.getProgressThresholdVisuals(strictPct);
             const remainingColor = window.getProgressRemainingChartColor();
 
             charts.kpiDay.data.labels = isOver ? ['Consumo Excedido'] : ['Consumo Actual', 'Restante'];
@@ -150,7 +152,6 @@ function updateEnergyDashboard(energy) {
         }
 
         // Barra de progreso
-        const strictPct = target > 0 ? (actual / target) * 100 : 0;
         const progressActual = document.getElementById('progressActual');
         const progressTarget = document.getElementById('progressTarget');
         const progressBar = document.getElementById('progressBar');
